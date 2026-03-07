@@ -2,6 +2,12 @@
 
 本文档用于整理 `fashion_erp` 的售后工单一期字段设计，便于评审和后续落地为 DocType。
 
+## 文档状态说明
+
+- 本文件是售后模块的设计草案与字段参考
+- 当前售后模块的真实实现进度，应以 [fashion-erp-phase2-task-list.md](E:\Dropbox\Syn\Project\frappe_docker_ra\docs\fashion-erp-phase2-task-list.md)、[fashion-erp-phase2-implementation.md](E:\Dropbox\Syn\Project\frappe_docker_ra\docs\fashion-erp-phase2-implementation.md) 和当前代码为准
+- 如果本文件中的个别默认值、状态名或字段表达与代码不完全一致，应优先以代码和阶段文档为准
+
 相关对象：
 
 - 已有退货原因字典：`Return Reason`

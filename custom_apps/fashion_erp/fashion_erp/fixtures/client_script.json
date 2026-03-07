@@ -17,6 +17,22 @@
   },
   {
     "doctype": "Client Script",
+    "name": "Fashion ERP Purchase Order Item Defaults",
+    "dt": "Purchase Order Item",
+    "view": "Form",
+    "enabled": 1,
+    "script": "frappe.ui.form.on(\"Purchase Order Item\", {\n\titem_code(frm, cdt, cdn) {\n\t\tapplySupplyPurchaseDefaults(cdt, cdn);\n\t}\n});\n\nfunction applySupplyPurchaseDefaults(cdt, cdn) {\n\tconst row = locals[cdt][cdn];\n\tif (!row.item_code) {\n\t\treturn;\n\t}\n\n\tfrappe.db.get_value(\n\t\t\"Item\",\n\t\trow.item_code,\n\t\t[\"item_usage_type\", \"supply_warehouse\"]\n\t).then((response) => {\n\t\tconst item = response.message || {};\n\t\tfrappe.model.set_value(cdt, cdn, \"item_usage_type\", item.item_usage_type || \"\");\n\t\tif (!row.warehouse && item.supply_warehouse) {\n\t\t\tfrappe.model.set_value(cdt, cdn, \"warehouse\", item.supply_warehouse);\n\t\t}\n\t});\n}\n"
+  },
+  {
+    "doctype": "Client Script",
+    "name": "Fashion ERP Purchase Receipt Item Defaults",
+    "dt": "Purchase Receipt Item",
+    "view": "Form",
+    "enabled": 1,
+    "script": "frappe.ui.form.on(\"Purchase Receipt Item\", {\n\titem_code(frm, cdt, cdn) {\n\t\tapplySupplyReceiptDefaults(cdt, cdn);\n\t}\n});\n\nfunction applySupplyReceiptDefaults(cdt, cdn) {\n\tconst row = locals[cdt][cdn];\n\tif (!row.item_code) {\n\t\treturn;\n\t}\n\n\tfrappe.db.get_value(\n\t\t\"Item\",\n\t\trow.item_code,\n\t\t[\"item_usage_type\", \"supply_warehouse\"]\n\t).then((response) => {\n\t\tconst item = response.message || {};\n\t\tfrappe.model.set_value(cdt, cdn, \"item_usage_type\", item.item_usage_type || \"\");\n\t\tif (!row.warehouse && item.supply_warehouse) {\n\t\t\tfrappe.model.set_value(cdt, cdn, \"warehouse\", item.supply_warehouse);\n\t\t}\n\t});\n}\n"
+  },
+  {
+    "doctype": "Client Script",
     "name": "Fashion ERP Sales Order Item Defaults",
     "dt": "Sales Order Item",
     "view": "Form",

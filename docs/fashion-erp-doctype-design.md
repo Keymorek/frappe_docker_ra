@@ -1,3 +1,13 @@
+# 文档状态说明
+
+本文件保留了项目早期的字段评审、修改意见和设计基线，用于追溯讨论过程。
+
+当前提交前请按下面口径理解本文件：
+
+- 产品主线、当前优先级和最新任务状态，以 [fashion-erp-product-analysis.md](E:\Dropbox\Syn\Project\frappe_docker_ra\docs\fashion-erp-product-analysis.md)、[fashion-erp-phase3-implementation.md](E:\Dropbox\Syn\Project\frappe_docker_ra\docs\fashion-erp-phase3-implementation.md)、[fashion-erp-phase3-task-list.md](E:\Dropbox\Syn\Project\frappe_docker_ra\docs\fashion-erp-phase3-task-list.md) 为准
+- 本文件中的部分早期边界、默认值和枚举表达，可能已经被后续实现或阶段规划覆盖
+- 因此，本文件应视为“历史设计基线与字段参考”，不是当前阶段的进度看板
+
 # 用户修改建议
 1. 款式层命名为Style SKU层命名为sku
 2. Style 增加 category、sub_category 解决品类细分的问题。替换原有的item_group 用两个表来解决
