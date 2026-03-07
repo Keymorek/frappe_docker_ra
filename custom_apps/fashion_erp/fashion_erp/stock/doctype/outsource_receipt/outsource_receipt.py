@@ -4,7 +4,9 @@ from frappe.model.document import Document
 from fashion_erp.stock.services.outsource_receipt_service import (
     autoname_outsource_receipt,
     build_outsource_receipt_stock_entry_payload,
+    build_outsource_receipt_final_stock_entry_payload,
     cancel_outsource_receipt,
+    complete_outsource_receipt_qc,
     confirm_outsource_receipt,
     mark_outsource_receipt_stocked,
     sync_outsource_receipt_number,
@@ -40,6 +42,23 @@ class OutsourceReceipt(Document):
             self,
             mark_outsource_receipt_stocked,
             stock_entry_ref=stock_entry_ref,
+            note=note,
+        )
+
+    @frappe.whitelist()
+    def prepare_final_stock_entry(self) -> dict[str, object]:
+        return build_outsource_receipt_final_stock_entry_payload(self.name)
+
+    @frappe.whitelist()
+    def complete_qc(
+        self,
+        final_stock_entry_ref: str | None = None,
+        note: str | None = None,
+    ) -> dict[str, object]:
+        return _run_and_reload(
+            self,
+            complete_outsource_receipt_qc,
+            final_stock_entry_ref=final_stock_entry_ref,
             note=note,
         )
 

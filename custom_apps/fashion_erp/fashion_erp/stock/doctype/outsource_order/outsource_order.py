@@ -5,6 +5,7 @@ from fashion_erp.stock.services.outsource_service import (
     autoname_outsource_order,
     cancel_outsource_order,
     complete_outsource_order,
+    get_outsource_supply_summary,
     start_outsource_order,
     submit_outsource_order,
     sync_outsource_order_number,
@@ -37,6 +38,10 @@ class OutsourceOrder(Document):
     @frappe.whitelist()
     def cancel_order(self, note: str | None = None) -> dict[str, object]:
         return _run_and_reload(self, cancel_outsource_order, note=note)
+
+    @frappe.whitelist()
+    def get_supply_summary(self) -> dict[str, object]:
+        return get_outsource_supply_summary(self.name)
 
 
 def _run_and_reload(doc: Document, action, **kwargs) -> dict[str, object]:

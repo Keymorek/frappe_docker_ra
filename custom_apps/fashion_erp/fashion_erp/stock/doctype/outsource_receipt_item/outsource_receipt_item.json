@@ -12,6 +12,11 @@
   "color_code",
   "size_code",
   "qty",
+  "sellable_qty",
+  "repair_qty",
+  "defective_qty",
+  "frozen_qty",
+  "qc_note",
   "remark"
  ],
  "fields": [
@@ -59,6 +64,35 @@
    "in_list_view": 1,
    "label": "到货数量",
    "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "sellable_qty",
+   "fieldtype": "Float",
+   "label": "可售数量"
+  },
+  {
+   "default": "0",
+   "fieldname": "repair_qty",
+   "fieldtype": "Float",
+   "label": "返修数量"
+  },
+  {
+   "default": "0",
+   "fieldname": "defective_qty",
+   "fieldtype": "Float",
+   "label": "次品数量"
+  },
+  {
+   "default": "0",
+   "fieldname": "frozen_qty",
+   "fieldtype": "Float",
+   "label": "冻结数量"
+  },
+  {
+   "fieldname": "qc_note",
+   "fieldtype": "Small Text",
+   "label": "质检说明"
   },
   {
    "fieldname": "remark",

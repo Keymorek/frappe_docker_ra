@@ -3,4 +3,7 @@ version = 1
 name = "frappe_docker_ra"
 
 [setup]
-script = ""
+script = '''
+cd /mnt/e/Dropbox/Syn/Project/frappe_docker_ra
+bash scripts/codex-env-check.sh
+'''

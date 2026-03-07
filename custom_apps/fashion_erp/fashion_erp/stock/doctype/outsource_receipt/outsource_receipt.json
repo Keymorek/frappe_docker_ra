@@ -25,6 +25,8 @@
   "color_code",
   "total_received_qty",
   "qc_stock_entry",
+  "final_stock_entry",
+  "qc_completed_at",
   "remark",
   "items_section",
   "items",
@@ -69,7 +71,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "单据状态",
-   "options": "草稿\n已收货\n已入库\n已取消",
+   "options": "草稿\n已收货\n已入库\n已质检\n已取消",
    "read_only": 1,
    "reqd": 1,
    "search_index": 1
@@ -184,6 +186,19 @@
    "label": "待检入库凭证",
    "options": "Stock Entry",
    "search_index": 1
+  },
+  {
+   "fieldname": "final_stock_entry",
+   "fieldtype": "Link",
+   "label": "质检落账凭证",
+   "options": "Stock Entry",
+   "search_index": 1
+  },
+  {
+   "fieldname": "qc_completed_at",
+   "fieldtype": "Datetime",
+   "label": "质检完成时间",
+   "read_only": 1
   },
   {
    "fieldname": "remark",

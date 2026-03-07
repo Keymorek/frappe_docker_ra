@@ -14,19 +14,32 @@ from fashion_erp.style.services.style_service import (
 )
 
 
-OUTSOURCE_RECEIPT_STATUSES = ("草稿", "已收货", "已入库", "已取消")
+OUTSOURCE_RECEIPT_STATUSES = ("草稿", "已收货", "已入库", "已质检", "已取消")
 OUTSOURCE_RECEIPT_STATUS_ALIASES = {
     "DRAFT": "草稿",
     "RECEIVED": "已收货",
     "STOCKED": "已入库",
+    "QC_DONE": "已质检",
     "CANCELLED": "已取消",
 }
-OUTSOURCE_RECEIPT_LOG_ACTIONS = ("创建", "收货确认", "生成入库草稿", "确认已入库", "取消", "状态变更", "备注")
+OUTSOURCE_RECEIPT_LOG_ACTIONS = (
+    "创建",
+    "收货确认",
+    "生成入库草稿",
+    "确认已入库",
+    "生成质检落账草稿",
+    "确认质检完成",
+    "取消",
+    "状态变更",
+    "备注",
+)
 OUTSOURCE_RECEIPT_LOG_ACTION_ALIASES = {
     "CREATE": "创建",
     "RECEIVE": "收货确认",
     "PREPARE_STOCK": "生成入库草稿",
     "CONFIRM_STOCK": "确认已入库",
+    "PREPARE_FINAL_STOCK": "生成质检落账草稿",
+    "CONFIRM_QC": "确认质检完成",
     "CANCEL": "取消",
     "STATUS_CHANGE": "状态变更",
     "COMMENT": "备注",
@@ -70,6 +83,8 @@ def validate_outsource_receipt(doc) -> None:
     doc.color_name = normalize_text(doc.color_name)
     doc.color_code = normalize_text(doc.color_code).upper()
     doc.qc_stock_entry = normalize_text(doc.qc_stock_entry)
+    doc.final_stock_entry = normalize_text(doc.final_stock_entry)
+    doc.qc_completed_at = _normalize_datetime(doc.qc_completed_at)
     doc.remark = normalize_text(doc.remark)
 
     _sync_from_order(doc)
@@ -148,6 +163,44 @@ def build_outsource_receipt_stock_entry_payload(receipt_name: str) -> dict[str, 
     }
 
 
+def build_outsource_receipt_final_stock_entry_payload(receipt_name: str) -> dict[str, object]:
+    doc = _get_outsource_receipt_doc(receipt_name)
+    if doc.receipt_status not in ("已入库", "已质检"):
+        frappe.throw(_("只有已入库的到货单才能生成质检落账草稿。"))
+
+    company = normalize_text(doc.company) or _get_default_company()
+    if not company:
+        frappe.throw(_("生成质检落账凭证前必须先确定公司。"))
+    ensure_link_exists("Company", company)
+
+    items = _build_final_stock_entry_items(doc)
+    if not items:
+        frappe.throw(_("当前没有可用于生成质检落账凭证的到货明细。"))
+
+    payload = _filter_doc_payload(
+        "Stock Entry",
+        {
+            "doctype": "Stock Entry",
+            "purpose": "Material Transfer",
+            "stock_entry_type": "Material Transfer" if frappe.db.exists("Stock Entry Type", "Material Transfer") else None,
+            "company": company,
+            "from_warehouse": doc.warehouse,
+            "to_warehouse": doc.warehouse,
+            "outsource_order": doc.outsource_order,
+            "outsource_receipt": doc.name,
+            "remarks": _("由外包到货单 {0} 自动生成质检落账草稿。").format(doc.name),
+            "items": items,
+        },
+        items=items,
+    )
+
+    return {
+        "ok": True,
+        "payload": payload,
+        "message": _("质检落账凭证草稿已生成。"),
+    }
+
+
 def mark_outsource_receipt_stocked(
     receipt_name: str,
     *,
@@ -177,12 +230,46 @@ def mark_outsource_receipt_stocked(
     return _save_receipt_action(doc, _("到货单已标记为已入库。"))
 
 
+def complete_outsource_receipt_qc(
+    receipt_name: str,
+    *,
+    final_stock_entry_ref: str | None = None,
+    note: str | None = None,
+) -> dict[str, object]:
+    doc = _get_outsource_receipt_doc(receipt_name)
+    if doc.receipt_status == "已质检":
+        return _build_receipt_response(doc, _("到货单已完成质检。"))
+    if doc.receipt_status != "已入库":
+        frappe.throw(_("只有已入库的到货单才能确认质检完成。"))
+
+    final_stock_entry_ref = normalize_text(final_stock_entry_ref) or doc.final_stock_entry
+    if not final_stock_entry_ref:
+        frappe.throw(_("确认质检完成前必须先填写质检落账凭证。"))
+    ensure_link_exists("Stock Entry", final_stock_entry_ref)
+
+    _validate_qc_result_completion(doc)
+
+    doc.final_stock_entry = final_stock_entry_ref
+    doc.qc_completed_at = now_datetime()
+
+    previous_status = doc.receipt_status
+    doc.receipt_status = "已质检"
+    _append_log(
+        doc,
+        action_type="确认质检完成",
+        from_status=previous_status,
+        to_status=doc.receipt_status,
+        note=normalize_text(note) or _("外包到货已完成质检并落入最终库存状态。"),
+    )
+    return _save_receipt_action(doc, _("到货单已完成质检。"))
+
+
 def cancel_outsource_receipt(receipt_name: str, *, note: str | None = None) -> dict[str, object]:
     doc = _get_outsource_receipt_doc(receipt_name)
     if doc.receipt_status == "已取消":
         return _build_receipt_response(doc, _("到货单已取消。"))
-    if doc.receipt_status == "已入库":
-        frappe.throw(_("已入库的到货单不允许取消。"))
+    if doc.receipt_status in ("已入库", "已质检"):
+        frappe.throw(_("已入库或已质检的到货单不允许取消。"))
 
     previous_status = doc.receipt_status
     doc.receipt_status = "已取消"
@@ -211,6 +298,7 @@ def _validate_links(doc) -> None:
     ensure_link_exists("Sample Ticket", doc.sample_ticket)
     ensure_enabled_link("Color", doc.color)
     ensure_link_exists("Stock Entry", doc.qc_stock_entry)
+    ensure_link_exists("Stock Entry", doc.final_stock_entry)
 
 
 def _sync_from_order(doc) -> None:
@@ -284,6 +372,11 @@ def _normalize_items(doc) -> None:
         row.color_code = normalize_text(getattr(row, "color_code", None)).upper()
         row.size_code = normalize_text(getattr(row, "size_code", None)).upper()
         row.qty = flt(getattr(row, "qty", None) or 0)
+        row.sellable_qty = flt(getattr(row, "sellable_qty", None) or 0)
+        row.repair_qty = flt(getattr(row, "repair_qty", None) or 0)
+        row.defective_qty = flt(getattr(row, "defective_qty", None) or 0)
+        row.frozen_qty = flt(getattr(row, "frozen_qty", None) or 0)
+        row.qc_note = normalize_text(getattr(row, "qc_note", None))
         row.remark = normalize_text(getattr(row, "remark", None))
 
         if not row.item_code:
@@ -318,6 +411,20 @@ def _normalize_items(doc) -> None:
             frappe.throw(_("到货明细第 {0} 行的颜色编码与外包单不一致。").format(frappe.bold(row.idx)))
         if row.qty <= 0:
             frappe.throw(_("到货明细第 {0} 行的到货数量必须大于 0。").format(frappe.bold(row.idx)))
+
+        for fieldname, label in (
+            ("sellable_qty", "可售数量"),
+            ("repair_qty", "返修数量"),
+            ("defective_qty", "次品数量"),
+            ("frozen_qty", "冻结数量"),
+        ):
+            value = flt(getattr(row, fieldname, 0) or 0)
+            if value < 0:
+                frappe.throw(_("到货明细第 {0} 行的{1}不能小于 0。").format(frappe.bold(row.idx), label))
+
+        result_qty = round(row.sellable_qty + row.repair_qty + row.defective_qty + row.frozen_qty, 2)
+        if result_qty > round(row.qty, 2):
+            frappe.throw(_("到货明细第 {0} 行的质检分配数量不能大于到货数量。").format(frappe.bold(row.idx)))
 
 
 def _normalize_logs(doc) -> None:
@@ -373,35 +480,112 @@ def _build_qc_stock_entry_items(doc) -> list[dict[str, object]]:
     items: list[dict[str, object]] = []
     for row in doc.items or []:
         validate_inventory_status_transition("", "QC_PENDING", row_label=f"到货明细第 {row.idx} 行")
-        item_row = frappe.db.get_value(
-            "Item",
-            row.item_code,
-            ["item_name", "stock_uom"],
-            as_dict=True,
-        ) or {}
-        payload = _filter_doc_payload(
-            "Stock Entry Detail",
-            {
-                "doctype": "Stock Entry Detail",
-                "item_code": row.item_code,
-                "item_name": item_row.get("item_name"),
-                "qty": row.qty,
-                "transfer_qty": row.qty,
-                "basic_qty": row.qty,
-                "uom": item_row.get("stock_uom"),
-                "stock_uom": item_row.get("stock_uom"),
-                "t_warehouse": doc.warehouse,
-                "style": row.style,
-                "color_code": row.color_code,
-                "size_code": row.size_code,
-                "inventory_status_from": "",
-                "inventory_status_to": "QC_PENDING",
-                "outsource_order": doc.outsource_order,
-                "outsource_receipt": doc.name,
-            },
+        payload = _build_stock_entry_row_payload(
+            doc,
+            row,
+            qty=row.qty,
+            s_warehouse="",
+            t_warehouse=doc.warehouse,
+            inventory_status_from="",
+            inventory_status_to="QC_PENDING",
         )
         items.append(payload)
     return items
+
+
+def _build_final_stock_entry_items(doc) -> list[dict[str, object]]:
+    _validate_qc_result_completion(doc)
+
+    items: list[dict[str, object]] = []
+    for row in doc.items or []:
+        for target_status, qty in (
+            ("SELLABLE", flt(row.sellable_qty or 0)),
+            ("REPAIR", flt(row.repair_qty or 0)),
+            ("DEFECTIVE", flt(row.defective_qty or 0)),
+            ("FROZEN", flt(row.frozen_qty or 0)),
+        ):
+            qty = round(qty, 2)
+            if qty <= 0:
+                continue
+            validate_inventory_status_transition("QC_PENDING", target_status, row_label=f"到货明细第 {row.idx} 行")
+            items.append(
+                _build_stock_entry_row_payload(
+                    doc,
+                    row,
+                    qty=qty,
+                    s_warehouse=doc.warehouse,
+                    t_warehouse=doc.warehouse,
+                    inventory_status_from="QC_PENDING",
+                    inventory_status_to=target_status,
+                )
+            )
+    return items
+
+
+def _build_stock_entry_row_payload(
+    doc,
+    row,
+    *,
+    qty: float,
+    s_warehouse: str,
+    t_warehouse: str,
+    inventory_status_from: str,
+    inventory_status_to: str,
+) -> dict[str, object]:
+    item_row = _get_item_basic_data(row.item_code)
+    return _filter_doc_payload(
+        "Stock Entry Detail",
+        {
+            "doctype": "Stock Entry Detail",
+            "item_code": row.item_code,
+            "item_name": item_row.get("item_name"),
+            "qty": qty,
+            "transfer_qty": qty,
+            "basic_qty": qty,
+            "uom": item_row.get("stock_uom"),
+            "stock_uom": item_row.get("stock_uom"),
+            "s_warehouse": s_warehouse,
+            "t_warehouse": t_warehouse,
+            "style": row.style,
+            "color_code": row.color_code,
+            "size_code": row.size_code,
+            "inventory_status_from": inventory_status_from,
+            "inventory_status_to": inventory_status_to,
+            "outsource_order": doc.outsource_order,
+            "outsource_receipt": doc.name,
+        },
+    )
+
+
+def _validate_qc_result_completion(doc) -> None:
+    for row in doc.items or []:
+        allocated_qty = round(
+            flt(row.sellable_qty or 0)
+            + flt(row.repair_qty or 0)
+            + flt(row.defective_qty or 0)
+            + flt(row.frozen_qty or 0),
+            2,
+        )
+        row_qty = round(flt(row.qty or 0), 2)
+        if allocated_qty != row_qty:
+            frappe.throw(
+                _(
+                    "到货明细第 {0} 行的质检分配数量必须等于到货数量。当前分配 {1}，到货 {2}。"
+                ).format(
+                    frappe.bold(row.idx),
+                    allocated_qty,
+                    row_qty,
+                )
+            )
+
+
+def _get_item_basic_data(item_code: str) -> dict[str, object]:
+    return frappe.db.get_value(
+        "Item",
+        item_code,
+        ["item_name", "stock_uom"],
+        as_dict=True,
+    ) or {}
 
 
 def _save_receipt_action(doc, message: str) -> dict[str, object]:
@@ -422,6 +606,8 @@ def _build_receipt_response(doc, message: str) -> dict[str, object]:
         "receipt_status": doc.receipt_status,
         "total_received_qty": float(doc.total_received_qty or 0),
         "qc_stock_entry": doc.qc_stock_entry,
+        "final_stock_entry": doc.final_stock_entry,
+        "qc_completed_at": str(doc.qc_completed_at) if doc.qc_completed_at else None,
         "message": message,
     }
 
@@ -434,7 +620,7 @@ def _sync_outsource_order_received_qty(order_name: str) -> None:
         "Outsource Receipt",
         filters={
             "outsource_order": order_name,
-            "receipt_status": ["in", ["已收货", "已入库"]],
+            "receipt_status": ["in", ["已收货", "已入库", "已质检"]],
         },
         fields=["total_received_qty"],
     )
@@ -496,8 +682,8 @@ def _get_outsource_receipt_doc(receipt_name: str):
 def _ensure_receipt_mutable(doc) -> None:
     if doc.receipt_status == "已取消":
         frappe.throw(_("已取消的到货单不能继续操作。"))
-    if doc.receipt_status == "已入库":
-        frappe.throw(_("已入库的到货单不能继续操作。"))
+    if doc.receipt_status == "已质检":
+        frappe.throw(_("已质检的到货单不能继续操作。"))
 
 
 def _get_default_company() -> str:

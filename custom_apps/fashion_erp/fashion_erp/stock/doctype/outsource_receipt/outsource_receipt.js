@@ -49,6 +49,12 @@ frappe.ui.form.on("Outsource Receipt", {
 			});
 		}
 
+		if (frm.doc.final_stock_entry) {
+			frm.add_custom_button(__("打开质检凭证"), () => {
+				frappe.set_route("Form", "Stock Entry", frm.doc.final_stock_entry);
+			});
+		}
+
 		if (frm.doc.receipt_status === "草稿") {
 			frm.add_custom_button(__("确认收货"), () => {
 				runOutsourceReceiptAction(frm, "confirm_receipt");
@@ -64,7 +70,16 @@ frappe.ui.form.on("Outsource Receipt", {
 			});
 		}
 
-		if (!["已入库", "已取消"].includes(frm.doc.receipt_status)) {
+		if (frm.doc.receipt_status === "已入库") {
+			frm.add_custom_button(__("生成质检落账草稿"), () => {
+				prepareFinalStockEntry(frm);
+			});
+			frm.add_custom_button(__("确认质检完成"), () => {
+				openCompleteQcDialog(frm);
+			});
+		}
+
+		if (!["已入库", "已质检", "已取消"].includes(frm.doc.receipt_status)) {
 			frm.add_custom_button(__("取消到货单"), () => {
 				runOutsourceReceiptAction(frm, "cancel_receipt");
 			});
@@ -124,6 +139,18 @@ frappe.ui.form.on("Outsource Receipt Item", {
 				frappe.model.set_value(cdt, cdn, "size_code", item.size_code);
 			}
 		});
+	},
+
+	qty(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		if (!row) {
+			return;
+		}
+
+		const allocated = Number(row.sellable_qty || 0) + Number(row.repair_qty || 0) + Number(row.defective_qty || 0) + Number(row.frozen_qty || 0);
+		if (allocated === 0 && Number(row.qty || 0) > 0) {
+			frappe.model.set_value(cdt, cdn, "sellable_qty", row.qty);
+		}
 	}
 });
 
@@ -159,6 +186,19 @@ function prepareQcStockEntry(frm) {
 	return invoke();
 }
 
+function prepareFinalStockEntry(frm) {
+	const invoke = () => frm.call("prepare_final_stock_entry").then((response) => {
+		const payload = response.message || {};
+		frappe.new_doc("Stock Entry", payload.payload || {});
+	});
+
+	if (frm.is_dirty()) {
+		return frm.save().then(() => invoke());
+	}
+
+	return invoke();
+}
+
 function openMarkStockedDialog(frm) {
 	const dialog = new frappe.ui.Dialog({
 		title: __("确认已入库"),
@@ -179,6 +219,32 @@ function openMarkStockedDialog(frm) {
 		primary_action_label: __("确认"),
 		primary_action(values) {
 			runOutsourceReceiptAction(frm, "mark_stocked", values).then(() => dialog.hide());
+		}
+	});
+
+	dialog.show();
+}
+
+function openCompleteQcDialog(frm) {
+	const dialog = new frappe.ui.Dialog({
+		title: __("确认质检完成"),
+		fields: [
+			{
+				fieldname: "final_stock_entry_ref",
+				fieldtype: "Link",
+				label: "质检落账凭证",
+				options: "Stock Entry",
+				default: frm.doc.final_stock_entry || ""
+			},
+			{
+				fieldname: "note",
+				fieldtype: "Small Text",
+				label: "备注"
+			}
+		],
+		primary_action_label: __("确认"),
+		primary_action(values) {
+			runOutsourceReceiptAction(frm, "complete_qc", values).then(() => dialog.hide());
 		}
 	});
 

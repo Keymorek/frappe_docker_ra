@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from collections import defaultdict
+
 import frappe
 from frappe import _
-from frappe.utils import cint, get_datetime, getdate, now_datetime, nowdate
+from frappe.utils import cint, flt, get_datetime, getdate, now_datetime, nowdate
 
 from fashion_erp.stock.services.supply_service import (
     ITEM_USAGE_TYPE_ALIASES,
@@ -177,6 +179,117 @@ def cancel_outsource_order(order_name: str, *, note: str | None = None) -> dict[
         note=normalize_text(note) or _("外包单已取消。"),
     )
     return _save_outsource_action(doc, _("外包单已取消。"))
+
+
+def get_outsource_supply_summary(order_name: str) -> dict[str, object]:
+    doc = _get_outsource_order_doc(order_name)
+    if not doc.materials:
+        return {
+            "ok": False,
+            "message": _("当前外包单还没有原辅料明细。"),
+            "rows": [],
+            "summary": _build_empty_supply_summary(),
+        }
+
+    material_groups = _group_outsource_materials(doc)
+    item_codes = tuple(material_groups.keys())
+    on_hand_by_item, on_hand_by_item_warehouse = _get_on_hand_qty_maps(item_codes)
+    on_order_by_item, on_order_by_item_warehouse, on_order_generic_by_item = _get_open_purchase_qty_maps(
+        item_codes,
+        style=doc.style,
+    )
+
+    rows: list[dict[str, object]] = []
+    totals = _build_empty_supply_summary()
+    shortage_count = 0
+
+    for item_code in sorted(material_groups):
+        group = material_groups[item_code]
+        warehouses = group["warehouses"]
+        on_hand_qty = _resolve_on_hand_qty(
+            item_code,
+            warehouses=warehouses,
+            by_item=on_hand_by_item,
+            by_item_warehouse=on_hand_by_item_warehouse,
+        )
+        on_order_qty = _resolve_on_order_qty(
+            item_code,
+            warehouses=warehouses,
+            by_item=on_order_by_item,
+            by_item_warehouse=on_order_by_item_warehouse,
+            generic_by_item=on_order_generic_by_item,
+        )
+
+        required_qty = _round_qty(group["required_qty"])
+        prepared_qty = _round_qty(group["prepared_qty"])
+        issued_qty = _round_qty(group["issued_qty"])
+        on_hand_qty = _round_qty(on_hand_qty)
+        on_order_qty = _round_qty(on_order_qty)
+        to_prepare_qty = _round_qty(max(required_qty - prepared_qty, 0))
+        to_issue_qty = _round_qty(max(min(required_qty, prepared_qty) - issued_qty, 0))
+        to_purchase_qty = _round_qty(max(required_qty - prepared_qty - on_hand_qty - on_order_qty, 0))
+
+        status = "已覆盖"
+        if to_purchase_qty > 0:
+            status = "需采购"
+        elif to_prepare_qty > 0:
+            status = "待备货"
+        elif to_issue_qty > 0:
+            status = "待发料"
+
+        warning = ""
+        if not warehouses:
+            warning = _("未指定备货仓库，现货与在途按全仓口径估算。")
+
+        row_payload = {
+            "item_code": item_code,
+            "item_name": group["item_name"],
+            "uom": group["uom"],
+            "required_qty": required_qty,
+            "prepared_qty": prepared_qty,
+            "issued_qty": issued_qty,
+            "on_hand_qty": on_hand_qty,
+            "on_order_qty": on_order_qty,
+            "to_prepare_qty": to_prepare_qty,
+            "to_issue_qty": to_issue_qty,
+            "to_purchase_qty": to_purchase_qty,
+            "warehouse_scope": "、".join(warehouses) if warehouses else _("全部仓库"),
+            "locations": "、".join(group["default_locations"]),
+            "source_rows": ", ".join(str(idx) for idx in group["row_indexes"]),
+            "status": status,
+            "warning": warning,
+        }
+        rows.append(row_payload)
+
+        totals["line_count"] += 1
+        totals["total_required_qty"] = _round_qty(totals["total_required_qty"] + required_qty)
+        totals["total_prepared_qty"] = _round_qty(totals["total_prepared_qty"] + prepared_qty)
+        totals["total_issued_qty"] = _round_qty(totals["total_issued_qty"] + issued_qty)
+        totals["total_on_hand_qty"] = _round_qty(totals["total_on_hand_qty"] + on_hand_qty)
+        totals["total_on_order_qty"] = _round_qty(totals["total_on_order_qty"] + on_order_qty)
+        totals["total_to_prepare_qty"] = _round_qty(totals["total_to_prepare_qty"] + to_prepare_qty)
+        totals["total_to_issue_qty"] = _round_qty(totals["total_to_issue_qty"] + to_issue_qty)
+        totals["total_to_purchase_qty"] = _round_qty(totals["total_to_purchase_qty"] + to_purchase_qty)
+        if to_purchase_qty > 0:
+            shortage_count += 1
+
+    rows.sort(key=lambda row: (-flt(row["to_purchase_qty"]), -flt(row["to_prepare_qty"]), row["item_code"]))
+    totals["shortage_count"] = shortage_count
+
+    message = _("供料视图已生成。")
+    if shortage_count:
+        message = _("供料视图已生成，存在 {0} 条需采购物料。").format(shortage_count)
+
+    return {
+        "ok": True,
+        "order_name": doc.name,
+        "order_no": doc.order_no or doc.name,
+        "style": doc.style,
+        "style_name": doc.style_name,
+        "rows": rows,
+        "summary": totals,
+        "message": message,
+    }
 
 
 def _validate_links(doc) -> None:
@@ -389,6 +502,180 @@ def _normalize_materials(doc) -> None:
                         frappe.bold(row.idx)
                     )
                 )
+
+
+def _group_outsource_materials(doc) -> dict[str, dict[str, object]]:
+    grouped: dict[str, dict[str, object]] = {}
+    for row in doc.materials or []:
+        item_code = normalize_text(getattr(row, "item_code", None))
+        if not item_code:
+            continue
+
+        payload = grouped.setdefault(
+            item_code,
+            {
+                "item_name": normalize_text(getattr(row, "item_name", None)) or item_code,
+                "uom": normalize_text(getattr(row, "uom", None)),
+                "required_qty": 0.0,
+                "prepared_qty": 0.0,
+                "issued_qty": 0.0,
+                "warehouses": set(),
+                "default_locations": set(),
+                "row_indexes": [],
+            },
+        )
+        payload["item_name"] = payload["item_name"] or normalize_text(getattr(row, "item_name", None)) or item_code
+        payload["uom"] = payload["uom"] or normalize_text(getattr(row, "uom", None))
+        payload["required_qty"] += flt(getattr(row, "planned_qty", None) or 0)
+        payload["prepared_qty"] += flt(getattr(row, "prepared_qty", None) or 0)
+        payload["issued_qty"] += flt(getattr(row, "issued_qty_manual", None) or 0)
+
+        warehouse = normalize_text(getattr(row, "warehouse", None))
+        location = normalize_text(getattr(row, "default_location", None))
+        if warehouse:
+            payload["warehouses"].add(warehouse)
+        if location:
+            payload["default_locations"].add(location)
+        if getattr(row, "idx", None):
+            payload["row_indexes"].append(cint(row.idx))
+
+    for payload in grouped.values():
+        payload["warehouses"] = sorted(payload["warehouses"])
+        payload["default_locations"] = sorted(payload["default_locations"])
+        payload["row_indexes"] = sorted(payload["row_indexes"])
+
+    return grouped
+
+
+def _get_on_hand_qty_maps(
+    item_codes: tuple[str, ...],
+) -> tuple[dict[str, float], dict[tuple[str, str], float]]:
+    if not item_codes:
+        return {}, {}
+
+    item_placeholders = ", ".join(["%s"] * len(item_codes))
+    rows = frappe.db.sql(
+        f"""
+        select item_code, warehouse, sum(actual_qty) as actual_qty
+        from `tabBin`
+        where item_code in ({item_placeholders})
+        group by item_code, warehouse
+        """,
+        item_codes,
+        as_dict=True,
+    )
+
+    by_item: dict[str, float] = defaultdict(float)
+    by_item_warehouse: dict[tuple[str, str], float] = {}
+    for row in rows:
+        item_code = normalize_text(row.get("item_code"))
+        warehouse = normalize_text(row.get("warehouse"))
+        qty = flt(row.get("actual_qty") or 0)
+        by_item[item_code] += qty
+        by_item_warehouse[(item_code, warehouse)] = qty
+
+    return dict(by_item), by_item_warehouse
+
+
+def _get_open_purchase_qty_maps(
+    item_codes: tuple[str, ...],
+    *,
+    style: str | None,
+) -> tuple[dict[str, float], dict[tuple[str, str], float], dict[str, float]]:
+    if not item_codes:
+        return {}, {}, {}
+
+    item_placeholders = ", ".join(["%s"] * len(item_codes))
+    params: list[object] = list(item_codes)
+    style = normalize_text(style)
+    style_filter = ""
+    if style:
+        style_filter = "and coalesce(poi.reference_style, '') in ('', %s)"
+        params.append(style)
+
+    rows = frappe.db.sql(
+        f"""
+        select
+            poi.item_code,
+            coalesce(poi.warehouse, '') as warehouse,
+            sum(
+                case
+                    when coalesce(poi.qty, 0) > coalesce(poi.received_qty, 0)
+                    then coalesce(poi.qty, 0) - coalesce(poi.received_qty, 0)
+                    else 0
+                end
+            ) as outstanding_qty
+        from `tabPurchase Order Item` poi
+        inner join `tabPurchase Order` po on po.name = poi.parent
+        where po.docstatus = 1
+          and poi.item_code in ({item_placeholders})
+          and coalesce(poi.qty, 0) > coalesce(poi.received_qty, 0)
+          {style_filter}
+        group by poi.item_code, coalesce(poi.warehouse, '')
+        """,
+        params,
+        as_dict=True,
+    )
+
+    by_item: dict[str, float] = defaultdict(float)
+    by_item_warehouse: dict[tuple[str, str], float] = {}
+    generic_by_item: dict[str, float] = defaultdict(float)
+    for row in rows:
+        item_code = normalize_text(row.get("item_code"))
+        warehouse = normalize_text(row.get("warehouse"))
+        qty = flt(row.get("outstanding_qty") or 0)
+        by_item[item_code] += qty
+        by_item_warehouse[(item_code, warehouse)] = qty
+        if not warehouse:
+            generic_by_item[item_code] += qty
+
+    return dict(by_item), by_item_warehouse, dict(generic_by_item)
+
+
+def _resolve_on_hand_qty(
+    item_code: str,
+    *,
+    warehouses: list[str],
+    by_item: dict[str, float],
+    by_item_warehouse: dict[tuple[str, str], float],
+) -> float:
+    if not warehouses:
+        return flt(by_item.get(item_code, 0))
+    return sum(flt(by_item_warehouse.get((item_code, warehouse), 0)) for warehouse in warehouses)
+
+
+def _resolve_on_order_qty(
+    item_code: str,
+    *,
+    warehouses: list[str],
+    by_item: dict[str, float],
+    by_item_warehouse: dict[tuple[str, str], float],
+    generic_by_item: dict[str, float],
+) -> float:
+    if not warehouses:
+        return flt(by_item.get(item_code, 0))
+
+    specific_qty = sum(flt(by_item_warehouse.get((item_code, warehouse), 0)) for warehouse in warehouses)
+    return specific_qty + flt(generic_by_item.get(item_code, 0))
+
+
+def _build_empty_supply_summary() -> dict[str, float | int]:
+    return {
+        "line_count": 0,
+        "shortage_count": 0,
+        "total_required_qty": 0.0,
+        "total_prepared_qty": 0.0,
+        "total_issued_qty": 0.0,
+        "total_on_hand_qty": 0.0,
+        "total_on_order_qty": 0.0,
+        "total_to_prepare_qty": 0.0,
+        "total_to_issue_qty": 0.0,
+        "total_to_purchase_qty": 0.0,
+    }
+
+
+def _round_qty(value: float | int) -> float:
+    return round(flt(value or 0), 2)
 
 
 def _normalize_logs(doc) -> None:
