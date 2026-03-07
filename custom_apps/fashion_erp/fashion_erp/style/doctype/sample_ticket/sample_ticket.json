@@ -1,0 +1,238 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "Prompt",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "ticket_no",
+  "style",
+  "style_name",
+  "item_template",
+  "color",
+  "color_name",
+  "color_code",
+  "sample_type",
+  "sample_status",
+  "priority",
+  "requested_by",
+  "handler_user",
+  "supplier",
+  "requested_date",
+  "expected_finish_date",
+  "finished_at",
+  "sample_qty",
+  "estimated_cost",
+  "actual_cost",
+  "sample_image",
+  "sample_note",
+  "review_note",
+  "logs_section",
+  "logs"
+ ],
+ "fields": [
+  {
+   "fieldname": "ticket_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "打样单号",
+   "read_only": 1,
+   "search_index": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "style",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "款号",
+   "options": "Style",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "style_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "款号名称",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "item_template",
+   "fieldtype": "Link",
+   "label": "模板货品",
+   "options": "Item",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "color",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "颜色",
+   "options": "Color",
+   "search_index": 1
+  },
+  {
+   "fieldname": "color_name",
+   "fieldtype": "Data",
+   "label": "颜色名称",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "color_code",
+   "fieldtype": "Data",
+   "label": "颜色编码",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "default": "首样",
+   "fieldname": "sample_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "打样类型",
+   "options": "首样\n修改样\n确认样\n拍摄样\n产前样\n其他",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "default": "新建",
+   "fieldname": "sample_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "打样状态",
+   "options": "新建\n已下发\n打样中\n待评审\n需返修\n已确认\n已取消",
+   "read_only": 1,
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "default": "普通",
+   "fieldname": "priority",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "优先级",
+   "options": "低\n普通\n高\n紧急",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "requested_by",
+   "fieldtype": "Link",
+   "label": "发起人",
+   "options": "User",
+   "search_index": 1
+  },
+  {
+   "fieldname": "handler_user",
+   "fieldtype": "Link",
+   "label": "跟进人",
+   "options": "User",
+   "search_index": 1
+  },
+  {
+   "fieldname": "supplier",
+   "fieldtype": "Link",
+   "label": "打样工厂",
+   "options": "Supplier",
+   "search_index": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "requested_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "发起日期",
+   "reqd": 1
+  },
+  {
+   "fieldname": "expected_finish_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "预计完成日期"
+  },
+  {
+   "fieldname": "finished_at",
+   "fieldtype": "Datetime",
+   "label": "确认时间",
+   "read_only": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "sample_qty",
+   "fieldtype": "Int",
+   "label": "打样数量",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "estimated_cost",
+   "fieldtype": "Currency",
+   "label": "预计成本"
+  },
+  {
+   "default": "0",
+   "fieldname": "actual_cost",
+   "fieldtype": "Currency",
+   "label": "实际成本"
+  },
+  {
+   "fieldname": "sample_image",
+   "fieldtype": "Attach Image",
+   "label": "样品图片"
+  },
+  {
+   "fieldname": "sample_note",
+   "fieldtype": "Small Text",
+   "label": "打样要求"
+  },
+  {
+   "fieldname": "review_note",
+   "fieldtype": "Small Text",
+   "label": "评审结论"
+  },
+  {
+   "fieldname": "logs_section",
+   "fieldtype": "Section Break",
+   "label": "处理日志"
+  },
+  {
+   "fieldname": "logs",
+   "fieldtype": "Table",
+   "label": "日志明细",
+   "options": "Sample Ticket Log"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "module": "Style",
+ "name": "Sample Ticket",
+ "naming_rule": "Set by user",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "search_fields": "ticket_no,style,style_name,color_name,supplier",
+ "show_name_in_global_search": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "title_field": "ticket_no",
+ "track_changes": 1
+}

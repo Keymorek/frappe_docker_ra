@@ -1,0 +1,7 @@
+fashion_erp.patches.v1_0.seed_phase1_master_data.execute
+fashion_erp.patches.v1_0.migrate_phase1_dictionary_links.execute
+fashion_erp.patches.v1_0.backfill_item_fields.execute
+fashion_erp.patches.v1_1.seed_phase2_stock_master_data.execute
+fashion_erp.patches.v1_1.backfill_warehouse_location_fields.execute
+fashion_erp.patches.v1_1.sync_phase2_stock_master_data.execute
+fashion_erp.patches.v1_2.translate_select_values_to_zh.execute

@@ -1,0 +1,308 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "Prompt",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "ticket_no",
+  "ticket_type",
+  "ticket_status",
+  "priority",
+  "order_section",
+  "channel",
+  "channel_store",
+  "external_order_id",
+  "sales_order",
+  "sales_invoice",
+  "delivery_note",
+  "customer",
+  "buyer_name",
+  "mobile",
+  "apply_time",
+  "reason_section",
+  "return_reason",
+  "reason_detail",
+  "warehouse",
+  "warehouse_location",
+  "logistics_company",
+  "tracking_no",
+  "received_at",
+  "return_disposition",
+  "refund_amount",
+  "refund_status",
+  "replacement_sales_order",
+  "owner_user",
+  "handler_user",
+  "remark",
+  "items_section",
+  "items",
+  "logs_section",
+  "logs"
+ ],
+ "fields": [
+  {
+   "fieldname": "ticket_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "售后单号",
+   "read_only": 1,
+   "search_index": 1,
+   "unique": 1
+  },
+  {
+   "default": "退货退款",
+   "fieldname": "ticket_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "工单类型",
+   "options": "仅退款\n退货退款\n换货\n补发\n维修\n投诉",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "default": "新建",
+   "fieldname": "ticket_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "工单状态",
+   "options": "新建\n待退回\n已收货\n质检中\n待处理\n待退款\n待补发\n已关闭\n已取消",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "default": "普通",
+   "fieldname": "priority",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "优先级",
+   "options": "低\n普通\n高\n紧急",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "order_section",
+   "fieldtype": "Section Break",
+   "label": "订单信息"
+  },
+  {
+   "fieldname": "channel",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "渠道",
+   "search_index": 1
+  },
+  {
+   "fieldname": "channel_store",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "渠道店铺",
+   "options": "Channel Store",
+   "search_index": 1
+  },
+  {
+   "fieldname": "external_order_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "外部订单号",
+   "search_index": 1
+  },
+  {
+   "fieldname": "sales_order",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "销售订单",
+   "options": "Sales Order",
+   "search_index": 1
+  },
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "label": "销售发票",
+   "options": "Sales Invoice",
+   "search_index": 1
+  },
+  {
+   "fieldname": "delivery_note",
+   "fieldtype": "Link",
+   "label": "发货单",
+   "options": "Delivery Note",
+   "search_index": 1
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "客户",
+   "options": "Customer",
+   "search_index": 1
+  },
+  {
+   "fieldname": "buyer_name",
+   "fieldtype": "Data",
+   "label": "买家姓名",
+   "search_index": 1
+  },
+  {
+   "fieldname": "mobile",
+   "fieldtype": "Data",
+   "label": "手机号",
+   "search_index": 1
+  },
+  {
+   "default": "Now",
+   "fieldname": "apply_time",
+   "fieldtype": "Datetime",
+   "label": "申请时间",
+   "reqd": 1
+  },
+  {
+   "fieldname": "reason_section",
+   "fieldtype": "Section Break",
+   "label": "售后处理"
+  },
+  {
+   "fieldname": "return_reason",
+   "fieldtype": "Link",
+   "label": "退货原因",
+   "options": "Return Reason",
+   "search_index": 1
+  },
+  {
+   "fieldname": "reason_detail",
+   "fieldtype": "Small Text",
+   "label": "原因说明"
+  },
+  {
+   "fieldname": "warehouse",
+   "fieldtype": "Link",
+   "label": "仓库",
+   "options": "Warehouse",
+   "search_index": 1
+  },
+  {
+   "fieldname": "warehouse_location",
+   "fieldtype": "Link",
+   "label": "仓库库位",
+   "options": "Warehouse Location",
+   "search_index": 1
+  },
+  {
+   "fieldname": "logistics_company",
+   "fieldtype": "Data",
+   "label": "物流公司",
+   "search_index": 1
+  },
+  {
+   "fieldname": "tracking_no",
+   "fieldtype": "Data",
+   "label": "运单号",
+   "search_index": 1
+  },
+  {
+   "fieldname": "received_at",
+   "fieldtype": "Datetime",
+   "label": "收货时间"
+  },
+  {
+   "fieldname": "return_disposition",
+   "fieldtype": "Link",
+   "label": "退货处理结果",
+   "options": "Return Disposition",
+   "search_index": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "refund_amount",
+   "fieldtype": "Currency",
+   "label": "退款金额"
+  },
+  {
+   "default": "无需退款",
+   "fieldname": "refund_status",
+   "fieldtype": "Select",
+   "label": "退款状态",
+   "options": "无需退款\n待退款\n已退款\n已驳回",
+   "search_index": 1
+  },
+  {
+   "fieldname": "replacement_sales_order",
+   "fieldtype": "Link",
+   "label": "补发销售订单",
+   "options": "Sales Order",
+   "search_index": 1
+  },
+  {
+   "fieldname": "owner_user",
+   "fieldtype": "Link",
+   "label": "创建人",
+   "options": "User",
+   "search_index": 1
+  },
+  {
+   "fieldname": "handler_user",
+   "fieldtype": "Link",
+   "label": "处理人",
+   "options": "User",
+   "search_index": 1
+  },
+  {
+   "fieldname": "remark",
+   "fieldtype": "Small Text",
+   "label": "备注"
+  },
+  {
+   "fieldname": "items_section",
+   "fieldtype": "Section Break",
+   "label": "明细"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "售后明细",
+   "options": "After Sales Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "logs_section",
+   "fieldtype": "Section Break",
+   "label": "日志"
+  },
+  {
+   "fieldname": "logs",
+   "fieldtype": "Table",
+   "label": "处理日志",
+   "options": "After Sales Log"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "module": "Stock",
+ "name": "After Sales Ticket",
+ "naming_rule": "Set by user",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "search_fields": "ticket_no,external_order_id,sales_order,customer,tracking_no",
+ "show_name_in_global_search": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "title_field": "ticket_no",
+ "track_changes": 1
+}

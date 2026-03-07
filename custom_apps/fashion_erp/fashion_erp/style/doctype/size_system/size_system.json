@@ -1,0 +1,82 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "field:size_system_code",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "size_system_code",
+  "size_system_name",
+  "applicable_products",
+  "enabled",
+  "remark"
+ ],
+ "fields": [
+  {
+   "fieldname": "size_system_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "尺码体系编码",
+   "length": 16,
+   "reqd": 1,
+   "search_index": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "size_system_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "尺码体系名称",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "applicable_products",
+   "fieldtype": "Small Text",
+   "label": "适用商品"
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "启用",
+   "search_index": 1
+  },
+  {
+   "fieldname": "remark",
+   "fieldtype": "Small Text",
+   "label": "备注"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "module": "Style",
+ "name": "Size System",
+ "naming_rule": "By fieldname",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "quick_entry": 1,
+ "search_fields": "size_system_code,size_system_name",
+ "show_name_in_global_search": 1,
+ "show_title_field_in_link": 1,
+ "sort_field": "size_system_code",
+ "sort_order": "ASC",
+ "title_field": "size_system_name",
+ "track_changes": 1
+}

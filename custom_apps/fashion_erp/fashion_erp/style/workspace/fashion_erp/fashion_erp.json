@@ -1,0 +1,296 @@
+{
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"时尚企业管理\",\"level\":3,\"col\":12}},{\"type\":\"header\",\"data\":{\"text\":\"主数据\",\"level\":4,\"col\":12}},{\"type\":\"card\",\"data\":{\"card_name\":\"商品企划\",\"col\":3}},{\"type\":\"card\",\"data\":{\"card_name\":\"原辅料与耗材\",\"col\":3}},{\"type\":\"card\",\"data\":{\"card_name\":\"打样管理\",\"col\":3}},{\"type\":\"card\",\"data\":{\"card_name\":\"生产管理\",\"col\":3}},{\"type\":\"card\",\"data\":{\"card_name\":\"库存设置\",\"col\":3}},{\"type\":\"card\",\"data\":{\"card_name\":\"售后管理\",\"col\":3}},{\"type\":\"card\",\"data\":{\"card_name\":\"渠道管理\",\"col\":3}}]",
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "package",
+ "indicator_color": "blue",
+ "is_hidden": 0,
+ "label": "时尚企业管理",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "商品企划",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "款号档案",
+   "link_count": 0,
+   "link_to": "Style",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "款式大类",
+   "link_count": 0,
+   "link_to": "Style Category",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "款式小类",
+   "link_count": 0,
+   "link_to": "Style Sub Category",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "颜色档案",
+   "link_count": 0,
+   "link_to": "Color",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "颜色组",
+   "link_count": 0,
+   "link_to": "Color Group",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "尺码体系",
+   "link_count": 0,
+   "link_to": "Size System",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "尺码编码",
+   "link_count": 0,
+   "link_to": "Size Code",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "原辅料与耗材",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "物料档案",
+   "link_count": 0,
+   "link_to": "Item",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "供应商",
+   "link_count": 0,
+   "link_to": "Supplier",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "采购订单",
+   "link_count": 0,
+   "link_to": "Purchase Order",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "采购收货",
+   "link_count": 0,
+   "link_to": "Purchase Receipt",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "打样管理",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "打样单",
+   "link_count": 0,
+   "link_to": "Sample Ticket",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "生产管理",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "生产跟踪单",
+   "link_count": 0,
+   "link_to": "Production Ticket",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "库存设置",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "仓区",
+   "link_count": 0,
+   "link_to": "Warehouse Zone",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "仓库库位",
+   "link_count": 0,
+   "link_to": "Warehouse Location",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "库存状态",
+   "link_count": 0,
+   "link_to": "Inventory Status",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "退货原因",
+   "link_count": 0,
+   "link_to": "Return Reason",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "退货处理结果",
+   "link_count": 0,
+   "link_to": "Return Disposition",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "售后管理",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "售后工单",
+   "link_count": 0,
+   "link_to": "After Sales Ticket",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "渠道管理",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "渠道店铺",
+   "link_count": 0,
+   "link_to": "Channel Store",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "module": "Style",
+ "name": "Fashion ERP",
+ "public": 1,
+ "restrict_to_domain": "",
+ "roles": [],
+ "sequence_id": 90,
+ "title": "时尚企业管理",
+ "type": "Workspace"
+}

@@ -1,0 +1,68 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-07 21:20:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "action_time",
+  "action_type",
+  "from_status",
+  "to_status",
+  "operator",
+  "note"
+ ],
+ "fields": [
+  {
+   "fieldname": "action_time",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "操作时间",
+   "reqd": 1
+  },
+  {
+   "fieldname": "action_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "操作类型",
+   "options": "创建\n下发\n开始打样\n提交评审\n要求返修\n确认样品\n取消\n状态变更\n备注",
+   "reqd": 1
+  },
+  {
+   "fieldname": "from_status",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "原状态",
+   "read_only": 1
+  },
+  {
+   "fieldname": "to_status",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "新状态",
+   "read_only": 1
+  },
+  {
+   "fieldname": "operator",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "操作人",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "note",
+   "fieldtype": "Small Text",
+   "label": "备注"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "module": "Style",
+ "name": "Sample Ticket Log",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

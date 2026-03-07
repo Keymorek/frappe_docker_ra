@@ -1,0 +1,208 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "format:PT-{YYYY}-{#####}",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "style",
+  "color",
+  "color_name",
+  "color_code",
+  "planning_section",
+  "item_template",
+  "qty",
+  "bom_no",
+  "work_order",
+  "supplier",
+  "status_section",
+  "stage",
+  "status",
+  "planned_start_date",
+  "planned_end_date",
+  "actual_start_date",
+  "actual_end_date",
+  "defect_qty",
+  "remark",
+  "logs_section",
+  "stage_logs"
+ ],
+ "fields": [
+  {
+   "fieldname": "style",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "款号",
+   "options": "Style",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "color",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "颜色",
+   "options": "Color",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "color_name",
+   "fieldtype": "Data",
+   "label": "颜色名称",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "color_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "颜色编码",
+   "read_only": 1,
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "planning_section",
+   "fieldtype": "Section Break",
+   "label": "生产规划"
+  },
+  {
+   "fieldname": "item_template",
+   "fieldtype": "Link",
+   "label": "模板货品",
+   "options": "Item",
+   "search_index": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "qty",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "数量",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "bom_no",
+   "fieldtype": "Link",
+   "label": "物料清单",
+   "options": "BOM"
+  },
+  {
+   "fieldname": "work_order",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "生产工单",
+   "options": "Work Order",
+   "search_index": 1
+  },
+  {
+   "fieldname": "supplier",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "供应商",
+   "options": "Supplier",
+   "search_index": 1
+  },
+  {
+   "fieldname": "status_section",
+   "fieldtype": "Section Break",
+   "label": "状态信息"
+  },
+  {
+   "default": "计划",
+   "fieldname": "stage",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "阶段",
+   "options": "计划\n裁剪\n车缝\n后整\n包装\n完成",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "default": "草稿",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "状态",
+   "options": "草稿\n进行中\n暂停\n已完成\n已取消",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "planned_start_date",
+   "fieldtype": "Date",
+   "in_standard_filter": 1,
+   "label": "计划开始日期"
+  },
+  {
+   "fieldname": "planned_end_date",
+   "fieldtype": "Date",
+   "label": "计划结束日期"
+  },
+  {
+   "fieldname": "actual_start_date",
+   "fieldtype": "Date",
+   "label": "实际开始日期"
+  },
+  {
+   "fieldname": "actual_end_date",
+   "fieldtype": "Date",
+   "label": "实际结束日期"
+  },
+  {
+   "default": "0",
+   "fieldname": "defect_qty",
+   "fieldtype": "Int",
+   "label": "不良数量",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remark",
+   "fieldtype": "Small Text",
+   "label": "备注"
+  },
+  {
+   "fieldname": "logs_section",
+   "fieldtype": "Section Break",
+   "label": "阶段日志"
+  },
+  {
+   "fieldname": "stage_logs",
+   "fieldtype": "Table",
+   "label": "日志明细",
+   "options": "Production Stage Log"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "module": "Garment Mfg",
+ "name": "Production Ticket",
+ "naming_rule": "Expression",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "search_fields": "style,color,color_code,stage,status,work_order",
+ "show_name_in_global_search": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}

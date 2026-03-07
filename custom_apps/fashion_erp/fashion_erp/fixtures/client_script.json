@@ -1,0 +1,58 @@
+[
+  {
+    "doctype": "Client Script",
+    "name": "Fashion ERP Item Supply Defaults",
+    "dt": "Item",
+    "view": "Form",
+    "enabled": 1,
+    "script": "frappe.ui.form.on(\"Item\", {\n\tsetup(frm) {\n\t\tif (frm.fields_dict.default_location) {\n\t\t\tfrm.set_query(\"default_location\", () => {\n\t\t\t\tconst filters = { enabled: 1 };\n\t\t\t\tif (frm.doc.supply_warehouse) {\n\t\t\t\t\tfilters.warehouse = frm.doc.supply_warehouse;\n\t\t\t\t}\n\t\t\t\treturn { filters };\n\t\t\t});\n\t\t}\n\t},\n\n\trefresh(frm) {\n\t\tsyncItemUsageDefaults(frm, false);\n\t},\n\n\titem_usage_type(frm) {\n\t\tsyncItemUsageDefaults(frm, true);\n\t},\n\n\tsupply_warehouse(frm) {\n\t\tif (!frm.doc.default_location) {\n\t\t\treturn;\n\t\t}\n\n\t\tfrappe.db.get_value(\"Warehouse Location\", frm.doc.default_location, \"warehouse\").then((response) => {\n\t\t\tconst row = response.message || {};\n\t\t\tif (row.warehouse && frm.doc.supply_warehouse && row.warehouse !== frm.doc.supply_warehouse) {\n\t\t\t\tfrm.set_value(\"default_location\", \"\");\n\t\t\t}\n\t\t});\n\t}\n});\n\nfunction syncItemUsageDefaults(frm, updateFields) {\n\tconst usage = frm.doc.item_usage_type;\n\tif (!usage) {\n\t\treturn;\n\t}\n\n\tif (updateFields) {\n\t\tif (usage === \"成品\") {\n\t\t\tfrm.set_value(\"sellable\", 1);\n\t\t\tfrm.set_value(\"supply_mode\", \"不适用\");\n\t\t\tfrm.set_value(\"is_fulfillment_consumable\", 0);\n\t\t} else {\n\t\t\tfrm.set_value(\"sellable\", 0);\n\t\t\tif (!frm.doc.supply_mode || frm.doc.supply_mode === \"不适用\") {\n\t\t\t\tfrm.set_value(\"supply_mode\", \"自供\");\n\t\t\t}\n\t\t\tfrm.set_value(\"is_fulfillment_consumable\", usage === \"包装耗材\" ? 1 : 0);\n\t\t}\n\t\tif ([\"面料\", \"辅料\", \"包装耗材\"].includes(usage) && frm.doc.is_stock_item !== 1) {\n\t\t\tfrm.set_value(\"is_stock_item\", 1);\n\t\t}\n\t}\n}\n"
+  },
+  {
+    "doctype": "Client Script",
+    "name": "Fashion ERP Sales Order Channel Defaults",
+    "dt": "Sales Order",
+    "view": "Form",
+    "enabled": 1,
+    "script": "frappe.ui.form.on(\"Sales Order\", {\n\tchannel_store(frm) {\n\t\tif (!frm.doc.channel_store) {\n\t\t\treturn;\n\t\t}\n\n\t\tfrappe.db.get_value(\"Channel Store\", frm.doc.channel_store, \"channel\").then((response) => {\n\t\t\tconst row = response.message || {};\n\t\t\tif (row.channel) {\n\t\t\t\tfrm.set_value(\"channel\", row.channel);\n\t\t\t}\n\t\t});\n\t}\n});\n"
+  },
+  {
+    "doctype": "Client Script",
+    "name": "Fashion ERP Sales Order Item Defaults",
+    "dt": "Sales Order Item",
+    "view": "Form",
+    "enabled": 1,
+    "script": "frappe.ui.form.on(\"Sales Order Item\", {\n\titem_code(frm, cdt, cdn) {\n\t\tconst row = locals[cdt][cdn];\n\t\tif (!row.item_code) {\n\t\t\treturn;\n\t\t}\n\n\t\tfrappe.db.get_value(\n\t\t\t\"Item\",\n\t\t\trow.item_code,\n\t\t\t[\"style\", \"color_code\", \"color_name\", \"size_code\", \"size_name\"]\n\t\t).then((response) => {\n\t\t\tconst item = response.message || {};\n\t\t\tfrappe.model.set_value(cdt, cdn, \"style\", item.style || \"\");\n\t\t\tfrappe.model.set_value(cdt, cdn, \"color_code\", item.color_code || \"\");\n\t\t\tfrappe.model.set_value(cdt, cdn, \"color_name\", item.color_name || \"\");\n\t\t\tfrappe.model.set_value(cdt, cdn, \"size_code\", item.size_code || \"\");\n\t\t\tfrappe.model.set_value(cdt, cdn, \"size_name\", item.size_name || \"\");\n\t\t});\n\t}\n});\n"
+  },
+  {
+    "doctype": "Client Script",
+    "name": "Fashion ERP Stock Entry Detail Defaults",
+    "dt": "Stock Entry Detail",
+    "view": "Form",
+    "enabled": 1,
+    "script": "frappe.ui.form.on(\"Stock Entry Detail\", {\n\titem_code(frm, cdt, cdn) {\n\t\tconst row = locals[cdt][cdn];\n\t\tif (!row.item_code) {\n\t\t\treturn;\n\t\t}\n\n\t\tfrappe.db.get_value(\n\t\t\t\"Item\",\n\t\t\trow.item_code,\n\t\t\t[\"style\", \"color_code\", \"size_code\"]\n\t\t).then((response) => {\n\t\t\tconst item = response.message || {};\n\t\t\tfrappe.model.set_value(cdt, cdn, \"style\", item.style || \"\");\n\t\t\tfrappe.model.set_value(cdt, cdn, \"color_code\", item.color_code || \"\");\n\t\t\tfrappe.model.set_value(cdt, cdn, \"size_code\", item.size_code || \"\");\n\t\t});\n\t},\n\n\tproduction_ticket(frm, cdt, cdn) {\n\t\tconst row = locals[cdt][cdn];\n\t\tif (!row.production_ticket) {\n\t\t\treturn;\n\t\t}\n\n\t\tfrappe.db.get_value(\n\t\t\t\"Production Ticket\",\n\t\t\trow.production_ticket,\n\t\t\t[\"style\", \"color_code\", \"item_template\"]\n\t\t).then((response) => {\n\t\t\tconst ticket = response.message || {};\n\t\t\tfrappe.model.set_value(cdt, cdn, \"style\", ticket.style || row.style || \"\");\n\t\t\tfrappe.model.set_value(cdt, cdn, \"color_code\", ticket.color_code || row.color_code || \"\");\n\t\t\tif (!row.item_code && ticket.item_template) {\n\t\t\t\tfrappe.model.set_value(cdt, cdn, \"item_code\", ticket.item_template);\n\t\t\t}\n\t\t});\n\t},\n\n\treturn_disposition(frm, cdt, cdn) {\n\t\tconst row = locals[cdt][cdn];\n\t\tif (!row.return_disposition) {\n\t\t\treturn;\n\t\t}\n\n\t\tfrappe.db.get_value(\n\t\t\t\"Return Disposition\",\n\t\t\trow.return_disposition,\n\t\t\t\"target_inventory_status\"\n\t\t).then((response) => {\n\t\t\tconst disposition = response.message || {};\n\t\t\tif (disposition.target_inventory_status) {\n\t\t\t\tfrappe.model.set_value(cdt, cdn, \"inventory_status_to\", disposition.target_inventory_status);\n\t\t\t}\n\t\t});\n\t}\n});\n"
+  },
+  {
+    "doctype": "Client Script",
+    "name": "Fashion ERP Stock Entry Status Queries",
+    "dt": "Stock Entry",
+    "view": "Form",
+    "enabled": 1,
+    "script": "frappe.ui.form.on(\"Stock Entry\", {\n\tsetup(frm) {\n\t\tconst grid = frm.fields_dict.items && frm.fields_dict.items.grid;\n\t\tif (!grid) {\n\t\t\treturn;\n\t\t}\n\n\t\t[\"inventory_status_from\", \"inventory_status_to\"].forEach((fieldname) => {\n\t\t\tgrid.get_field(fieldname).get_query = function () {\n\t\t\t\treturn {\n\t\t\t\t\tfilters: {\n\t\t\t\t\t\tenabled: 1\n\t\t\t\t\t}\n\t\t\t\t};\n\t\t\t};\n\t\t});\n\n\t\t[\"return_reason\", \"return_disposition\"].forEach((fieldname) => {\n\t\t\tgrid.get_field(fieldname).get_query = function () {\n\t\t\t\treturn {\n\t\t\t\t\tfilters: {\n\t\t\t\t\t\tenabled: 1\n\t\t\t\t\t}\n\t\t\t\t};\n\t\t\t};\n\t\t});\n\t}\n});\n"
+  },
+  {
+    "doctype": "Client Script",
+    "name": "Fashion ERP Work Order Production Defaults",
+    "dt": "Work Order",
+    "view": "Form",
+    "enabled": 1,
+    "script": "frappe.ui.form.on(\"Work Order\", {\n\tproduction_ticket(frm) {\n\t\tif (!frm.doc.production_ticket) {\n\t\t\treturn;\n\t\t}\n\n\t\tfrappe.db.get_value(\n\t\t\t\"Production Ticket\",\n\t\t\tfrm.doc.production_ticket,\n\t\t\t[\"style\", \"color_code\", \"item_template\", \"bom_no\", \"qty\"]\n\t\t).then((response) => {\n\t\t\tconst ticket = response.message || {};\n\t\t\tif (ticket.style) {\n\t\t\t\tfrm.set_value(\"style\", ticket.style);\n\t\t\t}\n\t\t\tif (ticket.color_code) {\n\t\t\t\tfrm.set_value(\"color_code\", ticket.color_code);\n\t\t\t}\n\t\t\tif (!frm.doc.production_item && ticket.item_template) {\n\t\t\t\tfrm.set_value(\"production_item\", ticket.item_template);\n\t\t\t}\n\t\t\tif (!frm.doc.bom_no && ticket.bom_no) {\n\t\t\t\tfrm.set_value(\"bom_no\", ticket.bom_no);\n\t\t\t}\n\t\t\tif (!frm.doc.qty && ticket.qty) {\n\t\t\t\tfrm.set_value(\"qty\", ticket.qty);\n\t\t\t}\n\t\t});\n\t}\n});\n"
+  },
+  {
+    "doctype": "Client Script",
+    "name": "Fashion ERP BOM Production Defaults",
+    "dt": "BOM",
+    "view": "Form",
+    "enabled": 1,
+    "script": "frappe.ui.form.on(\"BOM\", {\n\tproduction_ticket(frm) {\n\t\tif (!frm.doc.production_ticket) {\n\t\t\treturn;\n\t\t}\n\n\t\tfrappe.db.get_value(\n\t\t\t\"Production Ticket\",\n\t\t\tfrm.doc.production_ticket,\n\t\t\t[\"style\", \"color_code\", \"item_template\"]\n\t\t).then((response) => {\n\t\t\tconst ticket = response.message || {};\n\t\t\tif (ticket.style) {\n\t\t\t\tfrm.set_value(\"style\", ticket.style);\n\t\t\t}\n\t\t\tif (ticket.color_code) {\n\t\t\t\tfrm.set_value(\"color_code\", ticket.color_code);\n\t\t\t}\n\t\t\tif (!frm.doc.item && ticket.item_template) {\n\t\t\t\tfrm.set_value(\"item\", ticket.item_template);\n\t\t\t}\n\t\t});\n\t}\n});\n"
+  }
+]

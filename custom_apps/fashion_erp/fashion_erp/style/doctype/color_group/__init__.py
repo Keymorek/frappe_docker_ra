@@ -1,0 +1,1 @@
+"""Color Group DocType package."""

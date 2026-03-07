@@ -1,0 +1,85 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "field:sub_category_name",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sub_category_name",
+  "category",
+  "enabled",
+  "sort_order",
+  "remark"
+ ],
+ "fields": [
+  {
+   "fieldname": "sub_category_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "款式小类名称",
+   "reqd": 1,
+   "search_index": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "款式大类",
+   "options": "Style Category",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "启用",
+   "search_index": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "sort_order",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "排序"
+  },
+  {
+   "fieldname": "remark",
+   "fieldtype": "Small Text",
+   "label": "备注"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "module": "Style",
+ "name": "Style Sub Category",
+ "naming_rule": "By fieldname",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "quick_entry": 1,
+ "search_fields": "sub_category_name,category",
+ "show_name_in_global_search": 1,
+ "show_title_field_in_link": 1,
+ "sort_field": "sort_order",
+ "sort_order": "ASC",
+ "title_field": "sub_category_name",
+ "track_changes": 1
+}

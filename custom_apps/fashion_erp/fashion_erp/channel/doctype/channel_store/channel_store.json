@@ -1,0 +1,97 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "field:store_name",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "channel",
+  "store_name",
+  "warehouse",
+  "price_list",
+  "status",
+  "api_config_ref"
+ ],
+ "fields": [
+  {
+   "default": "手工",
+   "fieldname": "channel",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "渠道",
+   "options": "手工\n抖音\n虾皮\n独立站",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "store_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "店铺名称",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "warehouse",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "仓库",
+   "options": "Warehouse",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "price_list",
+   "fieldtype": "Link",
+   "label": "价格表",
+   "options": "Price List"
+  },
+  {
+   "default": "草稿",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "状态",
+   "options": "草稿\n启用\n停用",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "api_config_ref",
+   "fieldtype": "Data",
+   "label": "接口配置引用"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "module": "Channel",
+ "name": "Channel Store",
+ "naming_rule": "By fieldname",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "quick_entry": 1,
+ "search_fields": "channel,store_name",
+ "show_name_in_global_search": 1,
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "title_field": "store_name",
+ "track_changes": 1
+}
