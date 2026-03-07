@@ -26,6 +26,10 @@ frappe.ui.form.on("Style", {
 			createSampleTicket(frm);
 		});
 
+		frm.add_custom_button(__("创建工艺单"), () => {
+			createCraftSheet(frm);
+		});
+
 		frm.add_custom_button(__("生成单品编码"), () => {
 			runStyleAction(frm, "fashion_erp.style.api.generate_variants");
 		});
@@ -156,6 +160,19 @@ function createSampleTicket(frm) {
 		defaults.color = enabledColors[0].color;
 	}
 	frappe.new_doc("Sample Ticket", defaults);
+}
+
+function createCraftSheet(frm) {
+	const defaults = {
+		style: frm.doc.name,
+		style_name: frm.doc.style_name || "",
+		item_template: frm.doc.item_template || ""
+	};
+	const enabledColors = (frm.doc.colors || []).filter((row) => Number(row.enabled || 0) === 1);
+	if (enabledColors.length === 1) {
+		defaults.color = enabledColors[0].color;
+	}
+	frappe.new_doc("Craft Sheet", defaults);
 }
 
 function renderStyleMatrix(matrix) {

@@ -14,6 +14,15 @@ doc_events = {
     "BOM": {
         "on_update": "fashion_erp.garment_mfg.events.bom.sync_production_ticket",
     },
+    "Item": {
+        "validate": "fashion_erp.stock.events.item.validate_supply_metadata",
+    },
+    "Purchase Order": {
+        "validate": "fashion_erp.stock.events.purchase_order.validate_supply_procurement",
+    },
+    "Purchase Receipt": {
+        "validate": "fashion_erp.stock.events.purchase_receipt.validate_supply_receipt",
+    },
     "Sales Order": {
         "on_update": "fashion_erp.stock.events.sales_order.sync_after_sales_replacement_order",
     },

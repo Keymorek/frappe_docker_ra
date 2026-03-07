@@ -20,6 +20,12 @@ frappe.ui.form.on("Sample Ticket", {
 			});
 		}
 
+		if (frm.doc.sample_status === "已确认") {
+			frm.add_custom_button(__("创建工艺单"), () => {
+				createCraftSheetFromSample(frm);
+			});
+		}
+
 		if (["新建", "需返修"].includes(frm.doc.sample_status)) {
 			frm.add_custom_button(__("下发打样"), () => {
 				runSampleAction(frm, "submit_ticket");
@@ -140,4 +146,16 @@ function openConfirmDialog(frm) {
 	});
 
 	dialog.show();
+}
+
+function createCraftSheetFromSample(frm) {
+	frappe.new_doc("Craft Sheet", {
+		style: frm.doc.style,
+		style_name: frm.doc.style_name || "",
+		item_template: frm.doc.item_template || "",
+		sample_ticket: frm.doc.name,
+		color: frm.doc.color || "",
+		color_name: frm.doc.color_name || "",
+		color_code: frm.doc.color_code || ""
+	});
 }

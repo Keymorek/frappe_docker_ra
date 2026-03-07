@@ -1,5 +1,5 @@
 {
- "content": "[{\"type\":\"header\",\"data\":{\"text\":\"时尚企业管理\",\"level\":3,\"col\":12}},{\"type\":\"header\",\"data\":{\"text\":\"主数据\",\"level\":4,\"col\":12}},{\"type\":\"card\",\"data\":{\"card_name\":\"商品企划\",\"col\":3}},{\"type\":\"card\",\"data\":{\"card_name\":\"原辅料与耗材\",\"col\":3}},{\"type\":\"card\",\"data\":{\"card_name\":\"打样管理\",\"col\":3}},{\"type\":\"card\",\"data\":{\"card_name\":\"生产管理\",\"col\":3}},{\"type\":\"card\",\"data\":{\"card_name\":\"库存设置\",\"col\":3}},{\"type\":\"card\",\"data\":{\"card_name\":\"售后管理\",\"col\":3}},{\"type\":\"card\",\"data\":{\"card_name\":\"渠道管理\",\"col\":3}}]",
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"时尚企业管理\",\"level\":3,\"col\":12}},{\"type\":\"header\",\"data\":{\"text\":\"主数据\",\"level\":4,\"col\":12}},{\"type\":\"card\",\"data\":{\"card_name\":\"商品企划\",\"col\":3}},{\"type\":\"card\",\"data\":{\"card_name\":\"原辅料与耗材\",\"col\":3}},{\"type\":\"card\",\"data\":{\"card_name\":\"打样管理\",\"col\":3}},{\"type\":\"card\",\"data\":{\"card_name\":\"外包管理\",\"col\":3}},{\"type\":\"card\",\"data\":{\"card_name\":\"生产管理\",\"col\":3}},{\"type\":\"card\",\"data\":{\"card_name\":\"库存设置\",\"col\":3}},{\"type\":\"card\",\"data\":{\"card_name\":\"售后管理\",\"col\":3}},{\"type\":\"card\",\"data\":{\"card_name\":\"渠道管理\",\"col\":3}}]",
  "doctype": "Workspace",
  "for_user": "",
  "hide_custom": 0,
@@ -160,6 +160,47 @@
    "label": "打样单",
    "link_count": 0,
    "link_to": "Sample Ticket",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "工艺单",
+   "link_count": 0,
+   "link_to": "Craft Sheet",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "外包管理",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "外包单",
+   "link_count": 0,
+   "link_to": "Outsource Order",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "外包到货单",
+   "link_count": 0,
+   "link_to": "Outsource Receipt",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"

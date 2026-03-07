@@ -1,0 +1,225 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "Prompt",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sheet_no",
+  "style",
+  "style_name",
+  "item_template",
+  "sample_ticket",
+  "version_no",
+  "sheet_status",
+  "is_current_version",
+  "prepared_by",
+  "effective_date",
+  "color",
+  "color_name",
+  "color_code",
+  "estimated_unit_cost",
+  "fabric_note",
+  "trim_note",
+  "size_note",
+  "workmanship_note",
+  "packaging_note",
+  "qc_note",
+  "reference_file",
+  "remark",
+  "logs_section",
+  "logs"
+ ],
+ "fields": [
+  {
+   "fieldname": "sheet_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "工艺单号",
+   "read_only": 1,
+   "search_index": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "style",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "款号",
+   "options": "Style",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "style_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "款号名称",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "item_template",
+   "fieldtype": "Link",
+   "label": "模板货品",
+   "options": "Item",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "sample_ticket",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "关联打样单",
+   "options": "Sample Ticket",
+   "search_index": 1
+  },
+  {
+   "default": "V1",
+   "fieldname": "version_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "版本号",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "default": "草稿",
+   "fieldname": "sheet_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "单据状态",
+   "options": "草稿\n已发布\n已作废",
+   "read_only": 1,
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_current_version",
+   "fieldtype": "Check",
+   "label": "是否当前版本",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "prepared_by",
+   "fieldtype": "Link",
+   "label": "编制人",
+   "options": "User",
+   "search_index": 1
+  },
+  {
+   "fieldname": "effective_date",
+   "fieldtype": "Date",
+   "label": "生效日期"
+  },
+  {
+   "fieldname": "color",
+   "fieldtype": "Link",
+   "label": "颜色",
+   "options": "Color",
+   "search_index": 1
+  },
+  {
+   "fieldname": "color_name",
+   "fieldtype": "Data",
+   "label": "颜色名称",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "color_code",
+   "fieldtype": "Data",
+   "label": "颜色编码",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "estimated_unit_cost",
+   "fieldtype": "Currency",
+   "label": "预计单件成本"
+  },
+  {
+   "fieldname": "fabric_note",
+   "fieldtype": "Small Text",
+   "label": "面料说明"
+  },
+  {
+   "fieldname": "trim_note",
+   "fieldtype": "Small Text",
+   "label": "辅料说明"
+  },
+  {
+   "fieldname": "size_note",
+   "fieldtype": "Small Text",
+   "label": "尺码说明"
+  },
+  {
+   "fieldname": "workmanship_note",
+   "fieldtype": "Text Editor",
+   "label": "工艺说明"
+  },
+  {
+   "fieldname": "packaging_note",
+   "fieldtype": "Small Text",
+   "label": "包装要求"
+  },
+  {
+   "fieldname": "qc_note",
+   "fieldtype": "Small Text",
+   "label": "质检要求"
+  },
+  {
+   "fieldname": "reference_file",
+   "fieldtype": "Attach",
+   "label": "附件"
+  },
+  {
+   "fieldname": "remark",
+   "fieldtype": "Small Text",
+   "label": "备注"
+  },
+  {
+   "fieldname": "logs_section",
+   "fieldtype": "Section Break",
+   "label": "处理日志"
+  },
+  {
+   "fieldname": "logs",
+   "fieldtype": "Table",
+   "label": "日志明细",
+   "options": "Craft Sheet Log"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "module": "Style",
+ "name": "Craft Sheet",
+ "naming_rule": "Set by user",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "search_fields": "sheet_no,style,style_name,sample_ticket,version_no",
+ "show_name_in_global_search": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "title_field": "sheet_no",
+ "track_changes": 1
+}

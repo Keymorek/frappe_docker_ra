@@ -510,6 +510,28 @@
     },
     {
       "doctype": "Custom Field",
+      "dt": "Stock Entry",
+      "name": "Stock Entry-outsource_order",
+      "fieldname": "outsource_order",
+      "fieldtype": "Link",
+      "insert_after": "after_sales_ticket",
+      "label": "外包单",
+      "options": "Outsource Order",
+      "search_index": 1
+    },
+    {
+      "doctype": "Custom Field",
+      "dt": "Stock Entry",
+      "name": "Stock Entry-outsource_receipt",
+      "fieldname": "outsource_receipt",
+      "fieldtype": "Link",
+      "insert_after": "outsource_order",
+      "label": "到货单",
+      "options": "Outsource Receipt",
+      "search_index": 1
+    },
+    {
+      "doctype": "Custom Field",
       "dt": "Stock Entry Detail",
       "name": "Stock Entry Detail-style",
       "fieldname": "style",
@@ -612,6 +634,28 @@
       "insert_after": "return_disposition",
       "label": "售后工单",
       "options": "After Sales Ticket",
+      "search_index": 1
+    },
+    {
+      "doctype": "Custom Field",
+      "dt": "Stock Entry Detail",
+      "name": "Stock Entry Detail-outsource_order",
+      "fieldname": "outsource_order",
+      "fieldtype": "Link",
+      "insert_after": "after_sales_ticket",
+      "label": "外包单",
+      "options": "Outsource Order",
+      "search_index": 1
+    },
+    {
+      "doctype": "Custom Field",
+      "dt": "Stock Entry Detail",
+      "name": "Stock Entry Detail-outsource_receipt",
+      "fieldname": "outsource_receipt",
+      "fieldtype": "Link",
+      "insert_after": "outsource_order",
+      "label": "到货单",
+      "options": "Outsource Receipt",
       "search_index": 1
     },
     {
