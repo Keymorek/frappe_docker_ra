@@ -125,7 +125,7 @@
 
 - 已在服务端按外包单物料聚合生成 `required_qty / on_hand_qty / on_order_qty / prepared_qty / to_purchase_qty`
 - 已在 `Outsource Order` 表单补“查看供料视图”入口
-- 当前仍采用轻量口径，采购/收货回写联动留给 `T415`
+- 当前供料视图已形成轻量闭环，采购/收货的精确联动已由 `T415` 补齐
 
 ### T415 外包供料联动强化
 
@@ -133,7 +133,7 @@
 |---|---|
 | 任务编号 | `T415` |
 | 优先级 | `P1` |
-| 状态 | `TODO` |
+| 状态 | `DONE` |
 | 目标 | 让采购、收货与外包备货视图形成服务端联动 |
 | 交付物 | `supply_context=外包备货` 下的回写逻辑、聚合口径、备货跟踪增强 |
 
@@ -142,6 +142,13 @@
 - 这是对建议中“采购执行追踪 / 自动化联动”的改写版
 - 关键联动放服务端或 hook，不只依赖 Client Script
 - 当前不包含工厂虚拟仓和自动发料库存联动
+
+当前实现说明：
+
+- 已在 `Purchase Order Item / Purchase Receipt Item` 增加 `reference_outsource_order`
+- `Purchase Receipt` 可从来源采购行自动回填 `reference_style / reference_outsource_order / reference_sample_ticket / supply_context`
+- `supply_context=外包备货` 时，服务端强制校验外包单、款号、打样单、供料清单一致性
+- 外包供料视图的 `on_order_qty` 已优先按 `reference_outsource_order` 精确聚合，旧的 `reference_style` 口径只作为兼容回退
 
 ### T420 外包到货入库
 
@@ -319,7 +326,7 @@
 |---|---|
 | 任务编号 | `T460` |
 | 优先级 | `P1` |
-| 状态 | `TODO` |
+| 状态 | `DONE` |
 | 目标 | 建立正式测试基础设施并覆盖核心工具函数与服务函数 |
 | 交付物 | 测试目录、mock 策略、首批单元测试用例 |
 
@@ -331,13 +338,20 @@
 - `outsource_service.py`
 - `outsource_receipt_service.py`
 
+当前实现说明：
+
+- 已新增 `custom_apps/fashion_erp/tests/unit` 作为业务单元测试目录
+- 已提供 fake `frappe` 的轻量测试基座，可在无完整 Frappe 运行时的环境下导入服务模块
+- 已补首批单元测试，覆盖 `style_service.py`、`stock_service.py`、`after_sales_service.py`、`supply_service.py`、`outsource_service.py`、`outsource_receipt_service.py`
+- 当前本地执行口径为 `python3 -m unittest discover -s custom_apps/fashion_erp/tests/unit -p 'test_*.py'`
+
 ### T461 状态机与集成测试
 
 | 项目 | 内容 |
 |---|---|
 | 任务编号 | `T461` |
 | 优先级 | `P1` |
-| 状态 | `TODO` |
+| 状态 | `DONE` |
 | 目标 | 补齐关键状态流转和集成流程测试 |
 | 交付物 | 状态机测试、seed 幂等性测试、关键业务集成测试 |
 
@@ -347,6 +361,14 @@
 - 售后工单状态流转
 - 外包单 / 外包到货单状态流转
 - SKU 生成完整流程
+
+当前实现说明：
+
+- 已补 `Outsource Order` 状态推进与非法取消回归测试
+- 已补 `Outsource Receipt` 从收货到质检完成的状态链测试，以及已入库/已质检后的取消拦截测试
+- 已补 `After Sales Ticket` 的退款主链测试，以及待补发未生成补发单时的关闭拦截测试
+- 已补 `seed_stock_master_data` 幂等性测试与 `generate_variants_for_style` 的创建/更新/跳过主流程测试
+- 当前执行口径仍为 `python3 -m unittest discover -s custom_apps/fashion_erp/tests/unit -p 'test_*.py'`
 
 ### T462 性能与数据访问收口
 
@@ -375,18 +397,15 @@
 
 ## 剩余建议顺序
 
-1. `T415`
-2. `T460`
-3. `T461`
-4. `T430`
-5. `T431`
-6. `T432`
-7. `T433`
-8. `T434`
-9. `T435`
-10. `T422`
-11. `T440`
-12. `T462`
-13. `T450`
-14. `T451`
-15. `T490`
+1. `T430`
+2. `T431`
+3. `T432`
+4. `T433`
+5. `T434`
+6. `T435`
+7. `T422`
+8. `T440`
+9. `T462`
+10. `T450`
+11. `T451`
+12. `T490`

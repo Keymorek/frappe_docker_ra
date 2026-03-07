@@ -90,10 +90,13 @@ def validate_supply_purchase_order(doc) -> None:
             set_warehouse=None,
             item_label="采购明细",
         )
+        if getattr(row, "reference_outsource_order", None) and not getattr(row, "supply_context", None):
+            row.supply_context = "外包备货"
         row.supply_context = _normalize_supply_context(
             getattr(row, "supply_context", None),
             item_usage_type=item_usage_type,
         )
+        _sync_outsource_supply_context(row, item_usage_type, item_label="采购明细")
         _validate_supply_context(row, item_usage_type)
         _validate_supply_doc_row_type(
             doc.supply_order_type,
@@ -129,10 +132,14 @@ def validate_supply_purchase_receipt(doc) -> None:
             set_warehouse=header_warehouse,
             item_label="收货明细",
         )
+        _hydrate_supply_row_from_purchase_order(row, item_label="收货明细")
+        if getattr(row, "reference_outsource_order", None) and not getattr(row, "supply_context", None):
+            row.supply_context = "外包备货"
         row.supply_context = _normalize_supply_context(
             getattr(row, "supply_context", None),
             item_usage_type=item_usage_type,
         )
+        _sync_outsource_supply_context(row, item_usage_type, item_label="收货明细")
         _validate_supply_context(row, item_usage_type)
         _validate_supply_doc_row_type(
             doc.supply_receipt_type,
@@ -193,8 +200,11 @@ def _validate_item_supply_links(doc) -> None:
 def _prepare_supply_row(row, *, set_warehouse: str | None, item_label: str) -> str:
     row.item_usage_type = normalize_text(getattr(row, "item_usage_type", None))
     row.reference_style = normalize_text(getattr(row, "reference_style", None))
+    row.reference_outsource_order = normalize_text(getattr(row, "reference_outsource_order", None))
     row.reference_sample_ticket = normalize_text(getattr(row, "reference_sample_ticket", None))
     row.supply_context = normalize_text(getattr(row, "supply_context", None))
+    if row.reference_outsource_order and not row.supply_context:
+        row.supply_context = "外包备货"
 
     item_code = normalize_text(getattr(row, "item_code", None))
     if not item_code:
@@ -223,27 +233,169 @@ def _prepare_supply_row(row, *, set_warehouse: str | None, item_label: str) -> s
         current_warehouse = normalize_text(getattr(row, "warehouse", None))
         row.warehouse = current_warehouse or supply_warehouse or set_warehouse or ""
 
+    ensure_link_exists("Outsource Order", row.reference_outsource_order)
+    _sync_reference_style_from_sample_ticket(row, item_label=item_label)
+    return item_usage_type
+
+
+def _hydrate_supply_row_from_purchase_order(row, *, item_label: str) -> None:
+    source_row_name = _resolve_purchase_order_item_reference(row)
+    if not source_row_name:
+        return
+
+    source_row = frappe.db.get_value(
+        "Purchase Order Item",
+        source_row_name,
+        ["reference_style", "reference_outsource_order", "reference_sample_ticket", "supply_context"],
+        as_dict=True,
+    ) or {}
+
+    for fieldname in ("reference_style", "reference_outsource_order", "reference_sample_ticket", "supply_context"):
+        current_value = normalize_text(getattr(row, fieldname, None))
+        source_value = normalize_text(source_row.get(fieldname))
+        if not current_value and source_value:
+            setattr(row, fieldname, source_value)
+
+    ensure_link_exists("Outsource Order", row.reference_outsource_order)
+    _sync_reference_style_from_sample_ticket(row, item_label=item_label)
+
+    if row.reference_outsource_order and not row.supply_context:
+        row.supply_context = "外包备货"
+
+
+def _sync_reference_style_from_sample_ticket(row, *, item_label: str) -> None:
+    row.reference_style = normalize_text(getattr(row, "reference_style", None))
+    row.reference_sample_ticket = normalize_text(getattr(row, "reference_sample_ticket", None))
+
     ensure_link_exists("Style", row.reference_style)
     ensure_link_exists("Sample Ticket", row.reference_sample_ticket)
 
-    if row.reference_sample_ticket:
-        sample_style = normalize_text(
-            frappe.db.get_value("Sample Ticket", row.reference_sample_ticket, "style")
-        )
-        if not row.reference_style and sample_style:
-            row.reference_style = sample_style
-        elif row.reference_style and sample_style and row.reference_style != sample_style:
-            frappe.throw(
-                _(
-                    "{0}第 {1} 行的关联款号与打样单 {2} 不一致。"
-                ).format(
-                    item_label,
-                    frappe.bold(row.idx),
-                    frappe.bold(row.reference_sample_ticket),
-                )
-            )
+    if not row.reference_sample_ticket:
+        return
 
-    return item_usage_type
+    sample_style = normalize_text(
+        frappe.db.get_value("Sample Ticket", row.reference_sample_ticket, "style")
+    )
+    if not row.reference_style and sample_style:
+        row.reference_style = sample_style
+        return
+
+    if row.reference_style and sample_style and row.reference_style != sample_style:
+        frappe.throw(
+            _(
+                "{0}第 {1} 行的关联款号与打样单 {2} 不一致。"
+            ).format(
+                item_label,
+                frappe.bold(row.idx),
+                frappe.bold(row.reference_sample_ticket),
+            )
+        )
+
+
+def _resolve_purchase_order_item_reference(row) -> str:
+    source_row_name = normalize_text(getattr(row, "purchase_order_item", None)) or normalize_text(
+        getattr(row, "po_detail", None)
+    )
+    if source_row_name:
+        ensure_link_exists("Purchase Order Item", source_row_name)
+        return source_row_name
+
+    purchase_order = normalize_text(getattr(row, "purchase_order", None))
+    item_code = normalize_text(getattr(row, "item_code", None))
+    if not purchase_order or not item_code:
+        return ""
+
+    ensure_link_exists("Purchase Order", purchase_order)
+
+    filters = {"parent": purchase_order, "item_code": item_code}
+    warehouse = normalize_text(getattr(row, "warehouse", None))
+    if warehouse:
+        filters["warehouse"] = warehouse
+
+    matches = frappe.get_all(
+        "Purchase Order Item",
+        filters=filters,
+        pluck="name",
+        limit_page_length=2,
+    )
+    return matches[0] if len(matches) == 1 else ""
+
+
+def _sync_outsource_supply_context(row, item_usage_type: str, *, item_label: str) -> None:
+    row.reference_outsource_order = normalize_text(getattr(row, "reference_outsource_order", None))
+
+    if row.reference_outsource_order and row.supply_context != "外包备货":
+        frappe.throw(
+            _(
+                "{0}第 {1} 行已关联外包单，采购场景必须使用外包备货。"
+            ).format(item_label, frappe.bold(row.idx))
+        )
+
+    if row.supply_context != "外包备货":
+        return
+
+    if item_usage_type not in RAW_MATERIAL_ITEM_TYPES:
+        frappe.throw(
+            _(
+                "{0}第 {1} 行只有面料或辅料才能使用外包备货场景。"
+            ).format(item_label, frappe.bold(row.idx))
+        )
+
+    if not row.reference_outsource_order:
+        frappe.throw(
+            _(
+                "{0}第 {1} 行选择外包备货时，必须关联外包单。"
+            ).format(item_label, frappe.bold(row.idx))
+        )
+
+    order_doc = frappe.get_cached_doc("Outsource Order", row.reference_outsource_order)
+    order_status = normalize_text(getattr(order_doc, "order_status", None))
+    order_style = normalize_text(getattr(order_doc, "style", None))
+    order_sample_ticket = normalize_text(getattr(order_doc, "sample_ticket", None))
+    material_item_codes = {
+        normalize_text(getattr(material_row, "item_code", None))
+        for material_row in order_doc.materials or []
+        if normalize_text(getattr(material_row, "item_code", None))
+    }
+
+    if order_status == "已取消":
+        frappe.throw(
+            _(
+                "{0}第 {1} 行关联的外包单 {2} 已取消。"
+            ).format(item_label, frappe.bold(row.idx), frappe.bold(row.reference_outsource_order))
+        )
+
+    if not material_item_codes:
+        frappe.throw(
+            _(
+                "外包单 {0} 还没有供料清单，当前不能关联外包备货。"
+            ).format(frappe.bold(row.reference_outsource_order))
+        )
+
+    if order_style and not row.reference_style:
+        row.reference_style = order_style
+    elif order_style and row.reference_style and row.reference_style != order_style:
+        frappe.throw(
+            _(
+                "{0}第 {1} 行的关联款号与外包单 {2} 不一致。"
+            ).format(item_label, frappe.bold(row.idx), frappe.bold(row.reference_outsource_order))
+        )
+
+    if order_sample_ticket and not row.reference_sample_ticket:
+        row.reference_sample_ticket = order_sample_ticket
+    elif order_sample_ticket and row.reference_sample_ticket and row.reference_sample_ticket != order_sample_ticket:
+        frappe.throw(
+            _(
+                "{0}第 {1} 行的关联打样单与外包单 {2} 不一致。"
+            ).format(item_label, frappe.bold(row.idx), frappe.bold(row.reference_outsource_order))
+        )
+
+    if normalize_text(getattr(row, "item_code", None)) not in material_item_codes:
+        frappe.throw(
+            _(
+                "{0}第 {1} 行的物料不在外包单 {2} 的供料清单中。"
+            ).format(item_label, frappe.bold(row.idx), frappe.bold(row.reference_outsource_order))
+        )
 
 
 def _normalize_supply_context(value: str | None, *, item_usage_type: str) -> str:
@@ -260,11 +412,21 @@ def _validate_supply_context(row, item_usage_type: str) -> None:
     if row.supply_context == "打样采购" and not row.reference_sample_ticket:
         frappe.throw(_("第 {0} 行选择打样采购时，必须关联打样单。").format(frappe.bold(row.idx)))
 
+    if row.reference_outsource_order and row.supply_context != "外包备货":
+        frappe.throw(_("第 {0} 行已关联外包单，只能使用外包备货场景。").format(frappe.bold(row.idx)))
+
     if row.supply_context in ("打样采购", "外包备货") and not row.reference_style:
         frappe.throw(
             _("第 {0} 行选择 {1} 时，必须关联款号。").format(
                 frappe.bold(row.idx),
                 frappe.bold(row.supply_context),
+            )
+        )
+
+    if row.supply_context == "外包备货" and item_usage_type not in RAW_MATERIAL_ITEM_TYPES:
+        frappe.throw(
+            _("第 {0} 行只有面料或辅料才能使用外包备货场景。").format(
+                frappe.bold(row.idx)
             )
         )
 

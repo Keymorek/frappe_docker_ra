@@ -53,7 +53,7 @@
 - `T406` 已完成基础版，已在标准 `Purchase Order / Purchase Receipt` 上补采购用途、款号/打样引用、默认仓和服务端校验逻辑
 - `T413` 已完成，已具备 `Outsource Order.materials` 子表、`planned_qty / prepared_qty / issued_qty_manual` 人工登记字段，以及备货仓/库位默认与服务端校验
 - `T414` 已完成基础版，已具备 `required_qty / on_hand_qty / on_order_qty / prepared_qty / to_purchase_qty` 服务端计算逻辑和外包单上的供料视图入口
-- `T415` 尚未开始，后续承接采购/收货与 `外包备货` 场景的服务端回写和聚合联动
+- `T415` 已完成，已在 `Purchase Order / Purchase Receipt Item` 增加外包单引用、收货从来源采购行自动回填外包上下文、`外包备货` 强制绑定外包单并校验款号/供料清单，供料视图在途优先按 `reference_outsource_order` 精确聚合，旧款号口径仅作兼容回退
 
 ### 3B 打样与工艺单
 
@@ -111,14 +111,14 @@
 
 当前规划：
 
-- `T460`：测试基础设施与首批单元测试
-- `T461`：状态机与集成测试
+- `T460`：已完成，已建立 `custom_apps/fashion_erp/tests/unit` 与 fake `frappe` 单测基座，并落地首批服务层单元测试
+- `T461`：已完成，已补外包单、外包到货单、售后工单状态流转测试，以及 seed 幂等性与 SKU 主流程回归测试
 - `T462`：性能与数据访问收口
 
 说明：
 
 - 这一轨道正式纳入计划
-- 建议在 `T415` 后启动第一轮质量保障工作
+- `T460/T461` 已完成，下一步回到业务主线 `T430-T435`
 
 ## 第三阶段明确不做
 

@@ -280,10 +280,21 @@
   {
     "doctype": "Custom Field",
     "dt": "Purchase Order Item",
+    "name": "Purchase Order Item-reference_outsource_order",
+    "fieldname": "reference_outsource_order",
+    "fieldtype": "Link",
+    "insert_after": "reference_style",
+    "label": "关联外包单",
+    "options": "Outsource Order",
+    "search_index": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Purchase Order Item",
     "name": "Purchase Order Item-reference_sample_ticket",
     "fieldname": "reference_sample_ticket",
     "fieldtype": "Link",
-    "insert_after": "reference_style",
+    "insert_after": "reference_outsource_order",
     "label": "关联打样单",
     "options": "Sample Ticket",
     "search_index": 1
@@ -347,10 +358,21 @@
   {
     "doctype": "Custom Field",
     "dt": "Purchase Receipt Item",
+    "name": "Purchase Receipt Item-reference_outsource_order",
+    "fieldname": "reference_outsource_order",
+    "fieldtype": "Link",
+    "insert_after": "reference_style",
+    "label": "关联外包单",
+    "options": "Outsource Order",
+    "search_index": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Purchase Receipt Item",
     "name": "Purchase Receipt Item-reference_sample_ticket",
     "fieldname": "reference_sample_ticket",
     "fieldtype": "Link",
-    "insert_after": "reference_style",
+    "insert_after": "reference_outsource_order",
     "label": "关联打样单",
     "options": "Sample Ticket",
     "search_index": 1

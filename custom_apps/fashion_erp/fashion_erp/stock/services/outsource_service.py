@@ -194,9 +194,10 @@ def get_outsource_supply_summary(order_name: str) -> dict[str, object]:
     material_groups = _group_outsource_materials(doc)
     item_codes = tuple(material_groups.keys())
     on_hand_by_item, on_hand_by_item_warehouse = _get_on_hand_qty_maps(item_codes)
-    on_order_by_item, on_order_by_item_warehouse, on_order_generic_by_item = _get_open_purchase_qty_maps(
+    on_order_maps = _get_open_purchase_qty_maps(
         item_codes,
         style=doc.style,
+        outsource_order=doc.name,
     )
 
     rows: list[dict[str, object]] = []
@@ -215,10 +216,14 @@ def get_outsource_supply_summary(order_name: str) -> dict[str, object]:
         on_order_qty = _resolve_on_order_qty(
             item_code,
             warehouses=warehouses,
-            by_item=on_order_by_item,
-            by_item_warehouse=on_order_by_item_warehouse,
-            generic_by_item=on_order_generic_by_item,
+            linked_maps=on_order_maps.get("linked", {}),
+            legacy_maps=on_order_maps.get("legacy", {}),
         )
+
+        on_order_warning = ""
+        if on_order_qty[1]:
+            on_order_warning = _("存在未绑定外包单的旧采购数据，在途按款号口径补充估算。")
+        on_order_qty = on_order_qty[0]
 
         required_qty = _round_qty(group["required_qty"])
         prepared_qty = _round_qty(group["prepared_qty"])
@@ -237,9 +242,12 @@ def get_outsource_supply_summary(order_name: str) -> dict[str, object]:
         elif to_issue_qty > 0:
             status = "待发料"
 
-        warning = ""
+        warning_parts: list[str] = []
         if not warehouses:
-            warning = _("未指定备货仓库，现货与在途按全仓口径估算。")
+            warning_parts.append(_("未指定备货仓库，现货与在途按全仓口径估算。"))
+        if on_order_warning:
+            warning_parts.append(on_order_warning)
+        warning = "；".join(warning_parts)
 
         row_payload = {
             "item_code": item_code,
@@ -581,19 +589,48 @@ def _get_open_purchase_qty_maps(
     item_codes: tuple[str, ...],
     *,
     style: str | None,
-) -> tuple[dict[str, float], dict[tuple[str, str], float], dict[str, float]]:
+    outsource_order: str | None,
+) -> dict[str, dict[str, object]]:
     if not item_codes:
-        return {}, {}, {}
+        return {
+            "linked": _build_purchase_qty_scope_maps(),
+            "legacy": _build_purchase_qty_scope_maps(),
+        }
 
     item_placeholders = ", ".join(["%s"] * len(item_codes))
-    params: list[object] = list(item_codes)
     style = normalize_text(style)
-    style_filter = ""
-    if style:
-        style_filter = "and coalesce(poi.reference_style, '') in ('', %s)"
-        params.append(style)
+    linked_rows: list[dict[str, object]] = []
+    if normalize_text(outsource_order):
+        linked_rows = _query_open_purchase_qty_rows(
+            item_placeholders,
+            params=[*item_codes, normalize_text(outsource_order)],
+            extra_filter="and coalesce(poi.reference_outsource_order, '') = %s",
+        )
 
-    rows = frappe.db.sql(
+    legacy_rows: list[dict[str, object]] = []
+    if style:
+        legacy_rows = _query_open_purchase_qty_rows(
+            item_placeholders,
+            params=[*item_codes, style],
+            extra_filter="""
+              and coalesce(poi.reference_outsource_order, '') = ''
+              and coalesce(poi.reference_style, '') in ('', %s)
+            """,
+        )
+
+    return {
+        "linked": _build_purchase_qty_scope_maps(linked_rows),
+        "legacy": _build_purchase_qty_scope_maps(legacy_rows),
+    }
+
+
+def _query_open_purchase_qty_rows(
+    item_placeholders: str,
+    *,
+    params: list[object],
+    extra_filter: str,
+) -> list[dict[str, object]]:
+    return frappe.db.sql(
         f"""
         select
             poi.item_code,
@@ -610,17 +647,20 @@ def _get_open_purchase_qty_maps(
         where po.docstatus = 1
           and poi.item_code in ({item_placeholders})
           and coalesce(poi.qty, 0) > coalesce(poi.received_qty, 0)
-          {style_filter}
+          {extra_filter}
         group by poi.item_code, coalesce(poi.warehouse, '')
         """,
         params,
         as_dict=True,
     )
 
+
+def _build_purchase_qty_scope_maps(rows: list[dict[str, object]] | None = None) -> dict[str, object]:
     by_item: dict[str, float] = defaultdict(float)
     by_item_warehouse: dict[tuple[str, str], float] = {}
     generic_by_item: dict[str, float] = defaultdict(float)
-    for row in rows:
+
+    for row in rows or []:
         item_code = normalize_text(row.get("item_code"))
         warehouse = normalize_text(row.get("warehouse"))
         qty = flt(row.get("outstanding_qty") or 0)
@@ -629,7 +669,51 @@ def _get_open_purchase_qty_maps(
         if not warehouse:
             generic_by_item[item_code] += qty
 
-    return dict(by_item), by_item_warehouse, dict(generic_by_item)
+    return {
+        "by_item": dict(by_item),
+        "by_item_warehouse": by_item_warehouse,
+        "generic_by_item": dict(generic_by_item),
+    }
+
+
+def _resolve_scoped_purchase_qty(
+    item_code: str,
+    *,
+    warehouses: list[str],
+    scope_maps: dict[str, object],
+) -> float:
+    by_item = scope_maps.get("by_item", {})
+    by_item_warehouse = scope_maps.get("by_item_warehouse", {})
+    generic_by_item = scope_maps.get("generic_by_item", {})
+
+    if not warehouses:
+        return flt(by_item.get(item_code, 0))
+
+    specific_qty = sum(flt(by_item_warehouse.get((item_code, warehouse), 0)) for warehouse in warehouses)
+    return specific_qty + flt(generic_by_item.get(item_code, 0))
+
+
+def _resolve_on_order_qty(
+    item_code: str,
+    *,
+    warehouses: list[str],
+    linked_maps: dict[str, object],
+    legacy_maps: dict[str, object],
+) -> tuple[float, bool]:
+    linked_qty = _resolve_scoped_purchase_qty(
+        item_code,
+        warehouses=warehouses,
+        scope_maps=linked_maps,
+    )
+    if linked_qty > 0:
+        return linked_qty, False
+
+    legacy_qty = _resolve_scoped_purchase_qty(
+        item_code,
+        warehouses=warehouses,
+        scope_maps=legacy_maps,
+    )
+    return legacy_qty, legacy_qty > 0
 
 
 def _resolve_on_hand_qty(
@@ -642,21 +726,6 @@ def _resolve_on_hand_qty(
     if not warehouses:
         return flt(by_item.get(item_code, 0))
     return sum(flt(by_item_warehouse.get((item_code, warehouse), 0)) for warehouse in warehouses)
-
-
-def _resolve_on_order_qty(
-    item_code: str,
-    *,
-    warehouses: list[str],
-    by_item: dict[str, float],
-    by_item_warehouse: dict[tuple[str, str], float],
-    generic_by_item: dict[str, float],
-) -> float:
-    if not warehouses:
-        return flt(by_item.get(item_code, 0))
-
-    specific_qty = sum(flt(by_item_warehouse.get((item_code, warehouse), 0)) for warehouse in warehouses)
-    return specific_qty + flt(generic_by_item.get(item_code, 0))
 
 
 def _build_empty_supply_summary() -> dict[str, float | int]:
