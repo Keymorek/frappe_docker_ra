@@ -193,6 +193,20 @@ docker compose --project-name erpnext-lan -f ~/gitops/erpnext-lan.yaml logs -f c
 
 ### 步骤 7：创建站点并安装应用
 
+在执行 `new-site` 或 `install-app fashion_erp` 之前，先在代码目录运行一次静态安装验收：
+
+```bash
+cd /opt/frappe_docker_ra
+python3 custom_apps/fashion_erp/tests/app_structure_validation.py
+python3 -m unittest custom_apps.fashion_erp.tests.unit.test_app_structure_validation
+```
+
+通过标准：
+
+- 输出 `fashion_erp static structure validation passed.`
+- `test_app_structure_validation` 全部通过
+- 如果任一命令失败，先修复代码结构问题，不要继续安装
+
 如果是第一次新建站点：
 
 ```bash
@@ -292,6 +306,16 @@ export APPS_JSON_BASE64=$(base64 -w 0 apps.json)
 ### 步骤 3：重新构建镜像
 
 推荐做法是每次更新一个新 tag，而不是永远覆盖同一个 tag。
+
+构建镜像前，先重新执行一次静态安装验收：
+
+```bash
+cd /opt/frappe_docker_ra
+python3 custom_apps/fashion_erp/tests/app_structure_validation.py
+python3 -m unittest custom_apps.fashion_erp.tests.unit.test_app_structure_validation
+```
+
+如果这两步未通过，不要进入镜像构建和站点升级。
 
 例如：
 
