@@ -1,5 +1,7 @@
 app_name = "fashion_erp"
 app_title = "时尚企业管理"
+app_logo_url = "/assets/fashion_erp/images/fashion-erp-logo.svg"
+app_home = "/desk/fashion-erp"
 app_publisher = "Keymorek"
 app_description = "面向女装电商与服装制造业务的行业扩展。"
 app_email = ""
@@ -10,6 +12,7 @@ fixtures = ["Custom Field", "Client Script"]
 add_to_apps_screen = [
     {
         "name": "fashion_erp",
+        "logo": "/assets/fashion_erp/images/fashion-erp-logo.svg",
         "title": "时尚企业管理",
         "route": "/desk/fashion-erp",
     }
