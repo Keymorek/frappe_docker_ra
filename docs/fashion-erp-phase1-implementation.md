@@ -115,6 +115,8 @@
 - 当款号下已经存在生成出的 SKU 时，`size_system` 与 `Style Size` 都会被锁定，防止同一款号下出现两套尺码语义。
 - `Style` 相关中文化已补齐剩余缺口，新增 `Style Color` 翻译，并将 `Fabric Master` 的 `MOQ` 标签改为 `起订量(MOQ)`。
 - 为了收口 `Launch Status` 中英混用，新增了样式状态清洗 patch；站点执行 `migrate` 后会把 `launch_status / sales_status / season / gender` 的历史英文值统一转换成中文。
+- `Style Category Template` 现已按真实抖音数据集收口导入链：支持读取 `平台 / 原始模版文本` 列，支持从表单直接“同步内置抖音类目模板”，并关闭 `quick_entry`，避免误把一级类目当成唯一节点维护。
+- `Style` 模块主数据权限已从仅 `System Manager` 扩展到 `Stock Manager`，便于业务验收账号直接维护类目、季节、年份、面料、尺码和款号主档。
 
 ### 1. SKU 不单独建主表
 

@@ -43,6 +43,7 @@
   {
    "fieldname": "category_level_1",
    "fieldtype": "Data",
+   "description": "一级类目可在多条完整路径中重复出现，系统按类目全路径唯一。",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "一级类目",
@@ -82,6 +83,7 @@
   {
    "fieldname": "full_path",
    "fieldtype": "Data",
+   "description": "系统自动生成并按完整路径唯一，例如：女装 / 裤子 / 休闲裤。",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "类目全路径",
@@ -159,9 +161,21 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Stock Manager",
+   "share": 1,
+   "write": 1
   }
  ],
- "quick_entry": 1,
+ "quick_entry": 0,
  "search_fields": "full_path,leaf_category_name,category_level_1,category_level_2,category_level_3,category_level_4,external_text",
  "show_name_in_global_search": 1,
  "show_title_field_in_link": 1,

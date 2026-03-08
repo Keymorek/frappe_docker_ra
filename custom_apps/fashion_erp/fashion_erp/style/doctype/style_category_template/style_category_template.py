@@ -6,6 +6,7 @@ from fashion_erp.style.services.style_service import (
     build_style_category_template_details,
     coerce_checkbox,
     coerce_non_negative_int,
+    sync_style_category_template_seeds,
     normalize_size_system_rule_text,
     normalize_text,
     guess_size_system_rule_for_category,
@@ -31,6 +32,7 @@ class StyleCategoryTemplate(Document):
             self.category_level_2,
             self.category_level_3,
             self.category_level_4,
+            source_platform=self.source_platform,
         )
 
         self.category_level_1 = details["category_level_1"]
@@ -71,3 +73,22 @@ class StyleCategoryTemplate(Document):
 
         if not self.full_path:
             frappe.throw(_("类目全路径不能为空。"))
+
+        if frappe.db.exists("Style Category Template", self.full_path) and self.name != self.full_path:
+            frappe.throw(
+                _("类目模板按完整路径唯一，一级类目可以重复出现，但完整路径{0}已存在。").format(
+                    frappe.bold(self.full_path)
+                )
+            )
+
+
+@frappe.whitelist()
+def sync_builtin_style_category_templates() -> dict[str, object]:
+    has_permission = getattr(frappe, "has_permission", None)
+    if callable(has_permission) and not has_permission("Style Category Template", "write"):
+        frappe.throw(_("当前用户没有维护类目模板的权限。"))
+
+    payload = sync_style_category_template_seeds()
+    frappe.clear_cache()
+    payload["ok"] = True
+    return payload

@@ -7,6 +7,14 @@ app_license = "Proprietary"
 required_apps = ["erpnext"]
 fixtures = ["Custom Field", "Client Script"]
 
+add_to_apps_screen = [
+    {
+        "name": "fashion_erp",
+        "title": "时尚企业管理",
+        "route": "/desk/fashion-erp",
+    }
+]
+
 after_install = "fashion_erp.install.after_install"
 after_migrate = "fashion_erp.install.after_migrate"
 

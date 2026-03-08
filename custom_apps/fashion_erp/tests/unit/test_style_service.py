@@ -57,14 +57,20 @@ class TestStyleService(unittest.TestCase):
         with self.assertRaisesRegex(self.env.FrappeThrow, "不能跳级"):
             module.build_style_category_template_details("女装", "", "休闲裤", "")
 
+    def test_build_style_category_template_details_requires_second_level_for_douyin(self):
+        module = self.env.load_module("fashion_erp.style.services.style_service")
+
+        with self.assertRaisesRegex(self.env.FrappeThrow, "至少需要维护到二级类目"):
+            module.build_style_category_template_details("女装", "", "", "", source_platform="抖音")
+
     def test_load_style_category_template_seeds_reads_csv_template(self):
         module = self.env.load_module("fashion_erp.style.services.style_service")
 
         with tempfile.TemporaryDirectory() as temp_dir:
             csv_path = Path(temp_dir) / "抖音抖店女装服饰内衣类目.csv"
             csv_path.write_text(
-                "文本,一级类目,二级类目,三级类目,四级类目\n"
-                "女装-裤子-休闲裤-无,女装,裤子,休闲裤,无\n",
+                "平台,原始模版文本,一级类目,二级类目,三级类目,四级类目\n"
+                "抖音,女装-裤子-休闲裤-无,女装,裤子,休闲裤,无\n",
                 encoding="utf-8-sig",
             )
 
@@ -78,6 +84,23 @@ class TestStyleService(unittest.TestCase):
         self.assertEqual(rows[0]["leaf_category_name"], "休闲裤")
         self.assertEqual(rows[0]["default_size_system"], "BOTTOM")
         self.assertEqual(rows[0]["allowed_size_systems"], "BOTTOM")
+
+    def test_load_style_category_template_seeds_supports_legacy_text_column(self):
+        module = self.env.load_module("fashion_erp.style.services.style_service")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            csv_path = Path(temp_dir) / "抖音抖店女装服饰内衣类目.csv"
+            csv_path.write_text(
+                "平台,文本,一级类目,二级类目,三级类目,四级类目\n"
+                "抖音,女装-T 恤-无-无,女装,T 恤,无,无\n",
+                encoding="utf-8-sig",
+            )
+
+            with patch.object(module, "_find_style_category_csv_path", return_value=csv_path):
+                rows = module.load_style_category_template_seeds()
+
+        self.assertEqual(1, len(rows))
+        self.assertEqual("女装-T 恤-无-无", rows[0]["external_text"])
 
     def test_get_product_category_size_rule_parses_allowed_systems(self):
         module = self.env.load_module("fashion_erp.style.services.style_service")

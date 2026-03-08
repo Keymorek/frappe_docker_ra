@@ -343,7 +343,9 @@ def build_style_category_template_details(
     category_level_2: str | None = None,
     category_level_3: str | None = None,
     category_level_4: str | None = None,
+    source_platform: str | None = None,
 ) -> dict[str, object]:
+    normalized_source_platform = normalize_text(source_platform)
     levels = [
         normalize_category_level(category_level_1),
         normalize_category_level(category_level_2),
@@ -356,6 +358,9 @@ def build_style_category_template_details(
     for index in range(1, len(levels)):
         if levels[index] and not levels[index - 1]:
             frappe.throw(_("类目层级不能跳级，请按一级到四级连续维护。"))
+
+    if normalized_source_platform == "抖音" and not levels[1]:
+        frappe.throw(_("抖音类目模板至少需要维护到二级类目，请使用完整类目路径或直接同步内置模板。"))
 
     non_empty_levels = [level for level in levels if level]
     return {
@@ -679,17 +684,21 @@ def load_style_category_template_seeds() -> list[dict[str, object]]:
     with csv_path.open("r", encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
         for index, row in enumerate(reader, start=1):
+            source_platform = normalize_text(row.get("平台")) or "抖音"
             details = build_style_category_template_details(
                 row.get("一级类目"),
                 row.get("二级类目"),
                 row.get("三级类目"),
                 row.get("四级类目"),
+                source_platform=source_platform,
             )
             size_rule = guess_size_system_rule_for_category(details["full_path"])
             details.update(
                 {
-                    "source_platform": "抖音",
-                    "external_text": normalize_text(row.get("文本")),
+                    "source_platform": source_platform,
+                    "external_text": normalize_text(
+                        row.get("原始模版文本") or row.get("文本") or row.get("external_text")
+                    ),
                     "default_size_system": size_rule["default_size_system"],
                     "allowed_size_systems": serialize_size_system_rule_text(
                         size_rule["allowed_size_systems"]
@@ -701,6 +710,17 @@ def load_style_category_template_seeds() -> list[dict[str, object]]:
             seeds_by_path[details["full_path"]] = details
 
     return list(seeds_by_path.values())
+
+
+def sync_style_category_template_seeds() -> dict[str, object]:
+    rows = load_style_category_template_seeds()
+    for row in rows:
+        _upsert_named_doc("Style Category Template", "full_path", row)
+
+    return {
+        "row_count": len(rows),
+        "message": _("已同步 {0} 条内置类目模板。").format(len(rows)),
+    }
 
 
 def seed_master_data() -> None:
@@ -724,8 +744,7 @@ def seed_master_data() -> None:
     for row in build_style_year_seeds():
         _upsert_named_doc("Style Year", "year_name", row)
 
-    for row in load_style_category_template_seeds():
-        _upsert_named_doc("Style Category Template", "full_path", row)
+    sync_style_category_template_seeds()
 
 
 def _upsert_named_doc(doctype: str, name_field: str, values: dict[str, object]) -> str:

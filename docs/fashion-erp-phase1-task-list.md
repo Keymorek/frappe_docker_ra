@@ -96,6 +96,8 @@
 - 一旦款号已经生成 SKU，系统会锁定 `size_system` 和 `本款尺码`，不能再直接修改。
 - `Style` 验收剩余中文化项已收口，补齐了 `Style Color` 等翻译，并把 `Fabric Master.MOQ` 改为中文显示 `起订量(MOQ)`。
 - `Style.launch_status / sales_status` 已补新增量 patch，站点 `migrate` 后会把历史英文值统一清洗为中文。
+- `Style Category Template` 已关闭 `quick_entry`，并支持“同步内置抖音类目模板”；抖音模板口径下不再允许只建一级类目。
+- `Style` 模块主数据 Doctype 已补充 `Stock Manager` 权限，避免业务验收继续被 `System Manager` 权限卡住。
 
 ### T001 应用骨架初始化
 
