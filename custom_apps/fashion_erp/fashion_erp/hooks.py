@@ -11,6 +11,7 @@ fixtures = ["Custom Field", "Client Script"]
 
 add_to_apps_screen = [
     {
+        "has_permission": "fashion_erp.utils.has_app_permission",
         "name": "fashion_erp",
         "logo": "/assets/fashion_erp/images/fashion-erp-logo.svg",
         "title": "时尚企业管理",

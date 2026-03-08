@@ -21,6 +21,7 @@ class TestHooksMetadata(unittest.TestCase):
         self.assertTrue(entries)
         fashion_entry = next(entry for entry in entries if entry["name"] == "fashion_erp")
         self.assertEqual("时尚企业管理", fashion_entry["title"])
+        self.assertEqual("fashion_erp.utils.has_app_permission", fashion_entry["has_permission"])
         self.assertEqual("/assets/fashion_erp/images/fashion-erp-logo.svg", fashion_entry["logo"])
         self.assertEqual("/desk/fashion-erp", fashion_entry["route"])
 
