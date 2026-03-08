@@ -48,6 +48,31 @@ class TestAppStructureValidation(unittest.TestCase):
 
             self.assertTrue(any(issue.code == "reserved-module-package" for issue in issues))
 
+    def test_validator_reports_too_long_search_fields(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            container_root = Path(tmpdir)
+            app_root = container_root / "fashion_erp"
+            folder = app_root / "style" / "doctype" / "style_category_template"
+            folder.mkdir(parents=True)
+            (app_root / "style" / "__init__.py").write_text("", encoding="utf-8")
+            (app_root / "modules.txt").write_text("Style\n", encoding="utf-8")
+            (folder / "__init__.py").write_text("", encoding="utf-8")
+            (folder / "style_category_template.py").write_text("from frappe.model.document import Document\n", encoding="utf-8")
+            (folder / "style_category_template.json").write_text(
+                json.dumps(
+                    {
+                        "name": "Style Category Template",
+                        "module": "Style",
+                        "search_fields": ",".join(f"field_{index:02d}" for index in range(20)),
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            issues = validate_app_structure(container_root)
+
+            self.assertTrue(any(issue.code == "search-fields-too-long" for issue in issues))
+
 
 if __name__ == "__main__":
     unittest.main()

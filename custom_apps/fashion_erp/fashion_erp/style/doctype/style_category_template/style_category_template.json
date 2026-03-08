@@ -162,7 +162,7 @@
   }
  ],
  "quick_entry": 1,
- "search_fields": "full_path,leaf_category_name,category_level_1,category_level_2,category_level_3,category_level_4,external_text,default_size_system,allowed_size_systems",
+ "search_fields": "full_path,leaf_category_name,category_level_1,category_level_2,category_level_3,category_level_4,external_text",
  "show_name_in_global_search": 1,
  "show_title_field_in_link": 1,
  "sort_field": "sort_order",

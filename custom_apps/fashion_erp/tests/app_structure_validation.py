@@ -20,6 +20,8 @@ NON_MODULE_PACKAGES = {
     "translations",
 }
 
+SEARCH_FIELDS_MAX_LENGTH = 140
+
 # These package names are already occupied by standard Frappe / ERPNext modules.
 RESERVED_STANDARD_MODULE_PACKAGES = {
     "accounts",
@@ -160,6 +162,16 @@ def validate_app_structure(app_container_root: Path | None = None) -> list[Valid
                 )
             )
             continue
+
+        search_fields = str(data.get("search_fields") or "").strip()
+        if len(search_fields) > SEARCH_FIELDS_MAX_LENGTH:
+            issues.append(
+                ValidationIssue(
+                    code="search-fields-too-long",
+                    message=f"search_fields 长度 {len(search_fields)} 超过 Frappe Data 字段上限 {SEARCH_FIELDS_MAX_LENGTH}",
+                    path=json_path.as_posix(),
+                )
+            )
 
         expected_package = scrub_module_name(module_name)
         if package_name != expected_package:
