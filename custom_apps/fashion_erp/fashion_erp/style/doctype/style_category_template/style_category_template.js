@@ -1,6 +1,6 @@
 frappe.ui.form.on("Style Category Template", {
 	refresh(frm) {
-		if (!canManageStyleCategoryTemplates()) {
+		if (!canManageStyleCategoryTemplates(frm)) {
 			return;
 		}
 
@@ -8,8 +8,11 @@ frappe.ui.form.on("Style Category Template", {
 	}
 });
 
-function canManageStyleCategoryTemplates() {
-	return frappe.user.has_role("System Manager") || frappe.user.has_role("Stock Manager");
+function canManageStyleCategoryTemplates(frm) {
+	if (typeof frm.has_perm === "function") {
+		return frm.has_perm("write");
+	}
+	return (frm.perm || []).some((perm) => Boolean(perm.write));
 }
 
 function syncBuiltinStyleCategoryTemplates(frm) {

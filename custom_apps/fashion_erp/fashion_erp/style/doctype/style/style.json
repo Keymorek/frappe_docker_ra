@@ -318,6 +318,18 @@
    "role": "Stock Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Item Manager",
+   "share": 1,
+   "write": 1
   }
  ],
  "search_fields": "style_code,style_name,brand,product_category,category_level_1,category_level_2,category_level_3,category_level_4,category_full_path",

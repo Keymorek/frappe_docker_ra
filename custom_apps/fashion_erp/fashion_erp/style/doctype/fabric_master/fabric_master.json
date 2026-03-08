@@ -393,6 +393,18 @@
    "role": "Stock Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Item Manager",
+   "share": 1,
+   "write": 1
   }
  ],
  "search_fields": "fabric_id,fabric_name,fabric_category,fabric_sub_category,main_composition,supplier_name,supplier_code,standard_color_code",

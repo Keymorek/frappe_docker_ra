@@ -33,6 +33,7 @@ class TestStyleMetadata(unittest.TestCase):
                 roles = {row.get("role") for row in payload.get("permissions") or []}
                 self.assertIn("System Manager", roles)
                 self.assertIn("Stock Manager", roles)
+                self.assertIn("Item Manager", roles)
 
     def test_style_category_template_disables_quick_entry_and_labels_full_path_usage(self):
         json_path = Path(
