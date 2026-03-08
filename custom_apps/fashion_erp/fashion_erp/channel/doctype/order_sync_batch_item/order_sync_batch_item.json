@@ -1,0 +1,137 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "row_no",
+  "external_order_id",
+  "line_no",
+  "order_date",
+  "customer",
+  "item_code",
+  "platform_sku",
+  "qty",
+  "rate",
+  "biz_type",
+  "delivery_date",
+  "warehouse",
+  "row_status",
+  "sales_order",
+  "sales_order_item_ref",
+  "message"
+ ],
+ "fields": [
+  {
+   "fieldname": "row_no",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "行号"
+  },
+  {
+   "fieldname": "external_order_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "外部订单号",
+   "reqd": 1
+  },
+  {
+   "fieldname": "line_no",
+   "fieldtype": "Data",
+   "label": "平台行号"
+  },
+  {
+   "fieldname": "order_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "下单日期",
+   "reqd": 1
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "客户",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "SKU",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "platform_sku",
+   "fieldtype": "Data",
+   "label": "平台 SKU"
+  },
+  {
+   "default": "0",
+   "fieldname": "qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "数量",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "rate",
+   "fieldtype": "Currency",
+   "label": "单价"
+  },
+  {
+   "default": "零售",
+   "fieldname": "biz_type",
+   "fieldtype": "Select",
+   "label": "业务类型",
+   "options": "零售\n批发\n预售\n换货",
+   "reqd": 1
+  },
+  {
+   "fieldname": "delivery_date",
+   "fieldtype": "Date",
+   "label": "交期"
+  },
+  {
+   "fieldname": "warehouse",
+   "fieldtype": "Link",
+   "label": "仓库",
+   "options": "Warehouse"
+  },
+  {
+   "default": "草稿",
+   "fieldname": "row_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "行状态",
+   "options": "草稿\n待导入\n已导入\n重复跳过\n校验失败",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sales_order",
+   "fieldtype": "Link",
+   "label": "销售订单",
+   "options": "Sales Order",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sales_order_item_ref",
+   "fieldtype": "Data",
+   "label": "销售订单明细引用",
+   "read_only": 1
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Small Text",
+   "label": "结果说明",
+   "read_only": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "module": "Channel",
+ "name": "Order Sync Batch Item",
+ "track_changes": 1
+}

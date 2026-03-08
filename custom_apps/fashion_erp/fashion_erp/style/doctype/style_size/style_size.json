@@ -1,0 +1,51 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "size",
+  "size_code",
+  "size_name",
+  "sort_order"
+ ],
+ "fields": [
+  {
+   "fieldname": "size",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "尺码",
+   "options": "Size Code",
+   "reqd": 1
+  },
+  {
+   "fieldname": "size_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "尺码编码",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "size_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "尺码名称",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "sort_order",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "排序",
+   "read_only": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "module": "Style",
+ "name": "Style Size",
+ "track_changes": 1
+}

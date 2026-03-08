@@ -1,0 +1,2 @@
+external_order_id,order_date,item_code,qty,rate,biz_type,delivery_date,warehouse,platform_sku,line_no,customer
+EXT-20260308-001,2026-03-08,SKU-001,1,199,零售,2026-03-09,MAIN-WH,PLAT-SKU-001,1,ONLINE-CUSTOMER

@@ -1,0 +1,172 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "field:full_path",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "source_platform",
+  "external_text",
+  "category_level_1",
+  "category_level_2",
+  "category_level_3",
+  "category_level_4",
+  "leaf_category_name",
+  "full_path",
+  "level_depth",
+  "size_rule_section",
+  "default_size_system",
+  "allowed_size_systems",
+  "enabled",
+  "sort_order",
+  "remark"
+ ],
+ "fields": [
+  {
+   "default": "抖音",
+   "fieldname": "source_platform",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "来源平台",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "external_text",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "原始模板文本",
+   "search_index": 1
+  },
+  {
+   "fieldname": "category_level_1",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "一级类目",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "category_level_2",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "二级类目",
+   "search_index": 1
+  },
+  {
+   "fieldname": "category_level_3",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "三级类目",
+   "search_index": 1
+  },
+  {
+   "fieldname": "category_level_4",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "四级类目",
+   "search_index": 1
+  },
+  {
+   "fieldname": "leaf_category_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "最终类目",
+   "read_only": 1,
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "full_path",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "类目全路径",
+   "read_only": 1,
+   "reqd": 1,
+   "search_index": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "level_depth",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "层级深度",
+   "read_only": 1,
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "size_rule_section",
+   "fieldtype": "Section Break",
+   "label": "尺码规则"
+  },
+  {
+   "fieldname": "default_size_system",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "默认尺码体系",
+   "options": "Size System",
+   "search_index": 1
+  },
+  {
+   "fieldname": "allowed_size_systems",
+   "fieldtype": "Small Text",
+   "label": "允许尺码体系",
+   "search_index": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "启用",
+   "search_index": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "sort_order",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "排序",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "remark",
+   "fieldtype": "Small Text",
+   "label": "备注"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "module": "Style",
+ "name": "Style Category Template",
+ "naming_rule": "By fieldname",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "quick_entry": 1,
+ "search_fields": "full_path,leaf_category_name,category_level_1,category_level_2,category_level_3,category_level_4,external_text,default_size_system,allowed_size_systems",
+ "show_name_in_global_search": 1,
+ "show_title_field_in_link": 1,
+ "sort_field": "sort_order",
+ "sort_order": "ASC",
+ "title_field": "full_path",
+ "track_changes": 1
+}

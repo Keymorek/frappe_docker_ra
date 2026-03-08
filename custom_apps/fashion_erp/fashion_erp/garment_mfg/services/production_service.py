@@ -52,6 +52,7 @@ STOCK_ENTRY_PURPOSE_ALIASES = {
 
 
 def validate_production_ticket(doc) -> None:
+    _reset_production_ticket_validation_cache(doc)
     doc.stage = normalize_select(
         doc.stage,
         "阶段",
@@ -72,11 +73,11 @@ def validate_production_ticket(doc) -> None:
     if doc.qty <= 0:
         frappe.throw(_("数量必须大于 0。"))
 
-    ensure_link_exists("Style", doc.style)
-    ensure_link_exists("Item", doc.item_template)
-    ensure_link_exists("BOM", doc.bom_no)
-    ensure_link_exists("Work Order", doc.work_order)
-    ensure_link_exists("Supplier", doc.supplier)
+    _ensure_cached_link_exists(doc, "Style", doc.style)
+    _ensure_cached_link_exists(doc, "Item", doc.item_template)
+    _ensure_cached_link_exists(doc, "BOM", doc.bom_no)
+    _ensure_cached_link_exists(doc, "Work Order", doc.work_order)
+    _ensure_cached_link_exists(doc, "Supplier", doc.supplier)
 
     _sync_style_defaults(doc)
     _sync_ticket_color(doc)
@@ -638,12 +639,21 @@ def _ensure_not_on_hold(doc, message: str) -> None:
 
 
 def _validate_bom_reference(doc) -> None:
-    if not doc.bom_no or not frappe.db.exists("BOM", doc.bom_no):
+    if not _link_exists_cached(doc, "BOM", doc.bom_no):
         return
 
     bom_meta = frappe.get_meta("BOM")
+    fieldnames = []
     if bom_meta.has_field("style"):
-        bom_style = frappe.db.get_value("BOM", doc.bom_no, "style")
+        fieldnames.append("style")
+    if bom_meta.has_field("production_ticket"):
+        fieldnames.append("production_ticket")
+    if bom_meta.has_field("item") and doc.item_template:
+        fieldnames.append("item")
+
+    bom_row = _get_cached_reference_row(doc, "bom_rows", "BOM", doc.bom_no, fieldnames)
+    if bom_meta.has_field("style"):
+        bom_style = normalize_text(bom_row.get("style"))
         if bom_style and bom_style != doc.style:
             frappe.throw(
                 _("物料清单 {0} 关联的款号是 {1}，而不是 {2}。").format(
@@ -654,7 +664,7 @@ def _validate_bom_reference(doc) -> None:
             )
 
     if bom_meta.has_field("production_ticket"):
-        bom_ticket = frappe.db.get_value("BOM", doc.bom_no, "production_ticket")
+        bom_ticket = normalize_text(bom_row.get("production_ticket"))
         if bom_ticket and bom_ticket != doc.name:
             frappe.throw(
                 _("物料清单 {0} 已经关联到生产跟踪单 {1}。").format(
@@ -664,7 +674,7 @@ def _validate_bom_reference(doc) -> None:
             )
 
     if bom_meta.has_field("item") and doc.item_template:
-        bom_item = frappe.db.get_value("BOM", doc.bom_no, "item")
+        bom_item = normalize_text(bom_row.get("item"))
         if bom_item and bom_item != doc.item_template:
             frappe.throw(
                 _("物料清单 {0} 关联的物料是 {1}，而不是 {2}。").format(
@@ -676,12 +686,25 @@ def _validate_bom_reference(doc) -> None:
 
 
 def _validate_work_order_reference(doc) -> None:
-    if not doc.work_order or not frappe.db.exists("Work Order", doc.work_order):
+    if not _link_exists_cached(doc, "Work Order", doc.work_order):
         return
 
     work_order_meta = frappe.get_meta("Work Order")
+    fieldnames = []
     if work_order_meta.has_field("style"):
-        work_order_style = frappe.db.get_value("Work Order", doc.work_order, "style")
+        fieldnames.append("style")
+    if work_order_meta.has_field("production_ticket"):
+        fieldnames.append("production_ticket")
+
+    work_order_row = _get_cached_reference_row(
+        doc,
+        "work_order_rows",
+        "Work Order",
+        doc.work_order,
+        fieldnames,
+    )
+    if work_order_meta.has_field("style"):
+        work_order_style = normalize_text(work_order_row.get("style"))
         if work_order_style and work_order_style != doc.style:
             frappe.throw(
                 _("生产工单 {0} 关联的款号是 {1}，而不是 {2}。").format(
@@ -692,7 +715,7 @@ def _validate_work_order_reference(doc) -> None:
             )
 
     if work_order_meta.has_field("production_ticket"):
-        work_order_ticket = frappe.db.get_value("Work Order", doc.work_order, "production_ticket")
+        work_order_ticket = normalize_text(work_order_row.get("production_ticket"))
         if work_order_ticket and work_order_ticket != doc.name:
             frappe.throw(
                 _("生产工单 {0} 已经关联到生产跟踪单 {1}。").format(
@@ -707,10 +730,95 @@ def _get_stage_index(stage: str | None) -> int:
 
 
 def _build_ticket_size_range(doc) -> str:
-    if not doc.style or not frappe.db.exists("Style", doc.style):
+    if not _link_exists_cached(doc, "Style", doc.style):
         return ""
-    size_system = frappe.db.get_value("Style", doc.style, "size_system")
+    style_row = _get_cached_reference_row(
+        doc,
+        "style_rows",
+        "Style",
+        doc.style,
+        ["size_range_summary", "size_system"],
+    )
+    size_range_summary = normalize_text(style_row.get("size_range_summary"))
+    if size_range_summary:
+        return size_range_summary
+
+    size_system = normalize_text(style_row.get("size_system"))
     return get_size_range_summary(size_system)
+
+
+def _reset_production_ticket_validation_cache(doc) -> None:
+    cache = {
+        "link_exists": {},
+        "bom_rows": {},
+        "work_order_rows": {},
+        "style_rows": {},
+    }
+    flags = getattr(doc, "flags", None)
+    if flags is not None:
+        flags.production_ticket_validation_cache = cache
+        return
+    doc._production_ticket_validation_cache = cache
+
+
+def _get_production_ticket_validation_cache(doc) -> dict[str, object]:
+    flags = getattr(doc, "flags", None)
+    if flags is not None:
+        cache = getattr(flags, "production_ticket_validation_cache", None)
+        if isinstance(cache, dict):
+            return cache
+    else:
+        cache = getattr(doc, "_production_ticket_validation_cache", None)
+        if isinstance(cache, dict):
+            return cache
+
+    _reset_production_ticket_validation_cache(doc)
+    return _get_production_ticket_validation_cache(doc)
+
+
+def _link_exists_cached(doc, doctype: str, name: str | None) -> bool:
+    normalized_name = normalize_text(name)
+    if not normalized_name:
+        return False
+
+    cache = _get_production_ticket_validation_cache(doc)["link_exists"]
+    cache_key = (doctype, normalized_name)
+    if cache_key not in cache:
+        cache[cache_key] = bool(frappe.db.exists(doctype, normalized_name))
+    return cache[cache_key]
+
+
+def _ensure_cached_link_exists(doc, doctype: str, name: str | None) -> None:
+    normalized_name = normalize_text(name)
+    if not normalized_name:
+        return
+    if _link_exists_cached(doc, doctype, normalized_name):
+        return
+    ensure_link_exists(doctype, normalized_name)
+
+
+def _get_cached_reference_row(
+    doc,
+    cache_bucket: str,
+    doctype: str,
+    name: str | None,
+    fieldnames: list[str],
+) -> dict[str, object]:
+    normalized_name = normalize_text(name)
+    normalized_fields = tuple(fieldname for fieldname in fieldnames if fieldname)
+    if not normalized_name or not normalized_fields:
+        return {}
+
+    cache = _get_production_ticket_validation_cache(doc)[cache_bucket]
+    cache_key = (normalized_name, normalized_fields)
+    if cache_key not in cache:
+        cache[cache_key] = frappe.db.get_value(
+            doctype,
+            normalized_name,
+            list(normalized_fields),
+            as_dict=True,
+        ) or {}
+    return cache[cache_key]
 
 
 def _build_ticket_response(doc, message: str) -> dict[str, object]:
@@ -806,7 +914,7 @@ def _build_stock_entry_payload(
     items: list[dict[str, object]],
 ) -> dict[str, object]:
     company = _require_ticket_company(doc, "库存凭证")
-    stock_entry_type = _get_stock_entry_type(purpose)
+    stock_entry_type = _get_stock_entry_type(doc, purpose)
     payload = {
         "doctype": "Stock Entry",
         "purpose": purpose,
@@ -954,17 +1062,35 @@ def _get_item_basic_data(item_code: str) -> dict[str, object]:
 
 
 def _get_ticket_company(doc) -> str | None:
-    if doc.work_order and frappe.db.exists("Work Order", doc.work_order):
+    work_order = normalize_text(getattr(doc, "work_order", None))
+    if work_order and _link_exists_cached(doc, "Work Order", work_order):
         work_order_meta = frappe.get_meta("Work Order")
         if work_order_meta.has_field("company"):
-            company = frappe.db.get_value("Work Order", doc.work_order, "company")
+            company = normalize_text(
+                _get_cached_reference_row(
+                    doc,
+                    "work_order_rows",
+                    "Work Order",
+                    work_order,
+                    ["company"],
+                ).get("company")
+            )
             if company:
                 return company
 
-    if doc.bom_no and frappe.db.exists("BOM", doc.bom_no):
+    bom_no = normalize_text(getattr(doc, "bom_no", None))
+    if bom_no and _link_exists_cached(doc, "BOM", bom_no):
         bom_meta = frappe.get_meta("BOM")
         if bom_meta.has_field("company"):
-            company = frappe.db.get_value("BOM", doc.bom_no, "company")
+            company = normalize_text(
+                _get_cached_reference_row(
+                    doc,
+                    "bom_rows",
+                    "BOM",
+                    bom_no,
+                    ["company"],
+                ).get("company")
+            )
             if company:
                 return company
 
@@ -974,8 +1100,9 @@ def _get_ticket_company(doc) -> str | None:
         frappe.defaults.get_global_default("Company"),
     ]
     for company in defaults:
-        if company and frappe.db.exists("Company", company):
-            return company
+        normalized_company = normalize_text(company)
+        if normalized_company and _link_exists_cached(doc, "Company", normalized_company):
+            return normalized_company
     return None
 
 
@@ -990,9 +1117,10 @@ def _require_ticket_company(doc, document_label: str) -> str:
     )
 
 
-def _get_stock_entry_type(purpose: str) -> str | None:
-    if frappe.db.exists("Stock Entry Type", purpose):
-        return purpose
+def _get_stock_entry_type(doc, purpose: str) -> str | None:
+    normalized_purpose = normalize_text(purpose)
+    if normalized_purpose and _link_exists_cached(doc, "Stock Entry Type", normalized_purpose):
+        return normalized_purpose
     return None
 
 

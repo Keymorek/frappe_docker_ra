@@ -1,4 +1,4 @@
-from fashion_erp.stock.services.stock_service import seed_stock_master_data
+from fashion_erp.fashion_stock.services.stock_service import seed_stock_master_data
 
 
 def execute() -> None:

@@ -1,0 +1,1 @@
+"""Style Size DocType package."""

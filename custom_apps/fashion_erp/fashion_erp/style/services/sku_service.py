@@ -3,7 +3,7 @@ from frappe import _
 
 from fashion_erp.style.services.style_service import (
     get_brand_abbreviation,
-    get_enabled_size_codes,
+    get_selected_style_size_rows,
     get_style_variant_generation_issues,
 )
 
@@ -23,11 +23,11 @@ def build_template_item_code(style_doc) -> str:
     return f"TPL-{style_doc.style_code}"
 
 
-def create_template_item_for_style(style_name: str) -> dict[str, object]:
-    style = frappe.get_doc("Style", style_name)
+def create_template_item_for_style(style_name: str, *, style_doc=None) -> dict[str, object]:
+    style = _get_style_doc(style_name, style_doc=style_doc)
 
     if not style.item_group:
-        frappe.throw(_("创建模板货品前必须先选择物料组。"))
+        frappe.throw(_("创建模板货品前必须先选择成品物料组。"))
 
     template_code = build_template_item_code(style)
     template_name = _build_template_item_name(style.style_name)
@@ -68,30 +68,31 @@ def create_template_item_for_style(style_name: str) -> dict[str, object]:
     }
 
 
-def generate_variants_for_style(style_name: str) -> dict[str, object]:
-    style = frappe.get_doc("Style", style_name)
-    issues = get_style_variant_generation_issues(style)
+def generate_variants_for_style(style_name: str, *, style_doc=None) -> dict[str, object]:
+    style = _get_style_doc(style_name, style_doc=style_doc)
+    size_rows = get_selected_style_size_rows(style)
+    size_codes = [size_row.size_code for size_row in size_rows]
+    brand_prefix = get_brand_abbreviation(style.brand)
+    issues = get_style_variant_generation_issues(
+        style,
+        enabled_size_codes=size_codes,
+        brand_abbreviation=brand_prefix,
+    )
     if issues:
         frappe.throw("<br>".join(issues))
-
-    size_rows = frappe.get_all(
-        "Size Code",
-        filters={"size_system": style.size_system, "enabled": 1},
-        fields=["name", "size_code", "size_name", "sort_order"],
-        order_by="sort_order asc, size_code asc",
-    )
 
     created = []
     updated = []
     skipped = []
+    color_rows = [color_row for color_row in style.colors if color_row.enabled]
+    existing_item_codes = _get_existing_item_code_set(
+        _build_variant_sku_codes(style, color_rows, size_rows, brand_prefix)
+    )
 
-    for color_row in style.colors:
-        if not color_row.enabled:
-            continue
-
+    for color_row in color_rows:
         for size_row in size_rows:
-            sku_code = build_sku_code(style, color_row.color_code, size_row.size_code)
-            if frappe.db.exists("Item", sku_code):
+            sku_code = _build_sku_code_with_prefix(brand_prefix, style, color_row.color_code, size_row.size_code)
+            if sku_code in existing_item_codes:
                 item = frappe.get_doc("Item", sku_code)
                 changed = _sync_item_from_style(item, style, color_row, size_row)
                 if changed:
@@ -109,34 +110,31 @@ def generate_variants_for_style(style_name: str) -> dict[str, object]:
         "created": created,
         "updated": updated,
         "skipped": skipped,
-        "size_codes": get_enabled_size_codes(style.size_system),
+        "size_codes": size_codes,
     }
 
 
-def build_style_matrix(style_name: str) -> dict[str, object]:
-    style = frappe.get_doc("Style", style_name)
-    issues = get_style_variant_generation_issues(style)
+def build_style_matrix(style_name: str, *, style_doc=None) -> dict[str, object]:
+    style = _get_style_doc(style_name, style_doc=style_doc)
     matrix_brand_prefix = get_brand_abbreviation(style.brand) or "?"
-
-    size_rows = frappe.get_all(
-        "Size Code",
-        filters={"size_system": style.size_system, "enabled": 1},
-        fields=["size_code", "size_name", "sort_order"],
-        order_by="sort_order asc, size_code asc",
+    size_rows = get_selected_style_size_rows(style)
+    issues = get_style_variant_generation_issues(
+        style,
+        enabled_size_codes=[size_row.size_code for size_row in size_rows],
+        brand_abbreviation="" if matrix_brand_prefix == "?" else matrix_brand_prefix,
     )
+    color_rows = [color_row for color_row in style.colors if color_row.enabled]
+    item_snapshots = _get_matrix_item_snapshots(style, color_rows, size_rows, matrix_brand_prefix)
 
     rows = []
     existing_count = 0
     missing_count = 0
 
-    for color_row in style.colors:
-        if not color_row.enabled:
-            continue
-
+    for color_row in color_rows:
         cells = []
         for size_row in size_rows:
             sku_code = f"{matrix_brand_prefix}-{style.style_code}-{color_row.color_code}-{size_row.size_code}"
-            item = _get_item_snapshot(sku_code)
+            item = item_snapshots.get(sku_code)
             exists = bool(item)
             if exists:
                 existing_count += 1
@@ -179,6 +177,27 @@ def build_style_matrix(style_name: str) -> dict[str, object]:
         "brand_prefix": matrix_brand_prefix,
         "message": _("款色码矩阵加载完成。"),
     }
+
+
+def _get_style_doc(style_name: str | None, *, style_doc=None):
+    if style_doc is not None:
+        return style_doc
+    return frappe.get_doc("Style", style_name)
+
+
+def _get_matrix_item_snapshots(style, color_rows, size_rows, brand_prefix: str) -> dict[str, object]:
+    sku_codes = _build_variant_sku_codes(style, color_rows, size_rows, brand_prefix)
+    return _get_item_snapshots(sku_codes)
+def _build_variant_sku_codes(style, color_rows, size_rows, brand_prefix: str) -> list[str]:
+    return [
+        _build_sku_code_with_prefix(brand_prefix, style, color_row.color_code, size_row.size_code)
+        for color_row in color_rows
+        for size_row in size_rows
+    ]
+
+
+def _build_sku_code_with_prefix(brand_prefix: str, style, color_code: str, size_code: str) -> str:
+    return f"{brand_prefix}-{style.style_code}-{color_code}-{size_code}"
 
 
 def _build_item_doc(style, color_row, size_row, sku_code: str) -> dict[str, object]:
@@ -290,6 +309,70 @@ def _get_item_snapshot(item_code: str):
     if "sellable" not in item:
         item["sellable"] = 0
     return item
+
+
+def _get_item_snapshots(item_codes: list[str]) -> dict[str, object]:
+    normalized_codes = [item_code for item_code in item_codes if item_code]
+    if not normalized_codes:
+        return {}
+
+    item_meta = frappe.get_meta("Item")
+    fields = ["name", "item_code", "item_name"]
+    if item_meta.has_field("sellable"):
+        fields.append("sellable")
+
+    rows = frappe.get_all(
+        "Item",
+        filters=[["Item", "item_code", "in", normalized_codes]],
+        fields=fields,
+    )
+    stock_qty_map = _get_stock_qty_map(normalized_codes)
+    snapshots: dict[str, object] = {}
+    for row in rows or []:
+        item_code = row.get("item_code") or row.get("name")
+        if not item_code:
+            continue
+        row["stock_qty"] = stock_qty_map.get(item_code, 0.0)
+        if "sellable" not in row:
+            row["sellable"] = 0
+        snapshots[item_code] = row
+    return snapshots
+
+
+def _get_existing_item_code_set(item_codes: list[str]) -> set[str]:
+    normalized_codes = [item_code for item_code in item_codes if item_code]
+    if not normalized_codes:
+        return set()
+
+    rows = frappe.get_all(
+        "Item",
+        filters=[["Item", "item_code", "in", normalized_codes]],
+        fields=["item_code"],
+    )
+    return {
+        row.get("item_code")
+        for row in rows or []
+        if row.get("item_code")
+    }
+
+
+def _get_stock_qty_map(item_codes: list[str]) -> dict[str, float]:
+    normalized_codes = [item_code for item_code in item_codes if item_code]
+    if not normalized_codes or not frappe.db.exists("DocType", "Bin"):
+        return {}
+
+    rows = frappe.get_all(
+        "Bin",
+        filters=[["Bin", "item_code", "in", normalized_codes]],
+        fields=["item_code", "actual_qty"],
+    )
+    qty_map: dict[str, float] = {}
+    for row in rows or []:
+        item_code = row.get("item_code")
+        if not item_code:
+            continue
+        qty_map[item_code] = float(qty_map.get(item_code, 0) + float(row.get("actual_qty") or 0))
+    return qty_map
 
 
 def _get_stock_qty(item_code: str) -> float:

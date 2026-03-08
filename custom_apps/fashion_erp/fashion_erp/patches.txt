@@ -5,3 +5,5 @@ fashion_erp.patches.v1_1.seed_phase2_stock_master_data.execute
 fashion_erp.patches.v1_1.backfill_warehouse_location_fields.execute
 fashion_erp.patches.v1_1.sync_phase2_stock_master_data.execute
 fashion_erp.patches.v1_2.translate_select_values_to_zh.execute
+fashion_erp.patches.v1_3.add_sales_order_external_order_index.execute
+fashion_erp.patches.v1_3.normalize_style_select_values.execute

@@ -1,0 +1,197 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "Prompt",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "batch_no",
+  "channel_store",
+  "channel",
+  "default_company",
+  "default_customer",
+  "default_warehouse",
+  "default_price_list",
+  "template_version",
+  "source_file_name",
+  "source_hash",
+  "batch_status",
+  "total_rows",
+  "valid_rows",
+  "failed_rows",
+  "imported_orders",
+  "duplicate_orders",
+  "last_import_at",
+  "remark",
+  "items_section",
+  "items"
+ ],
+ "fields": [
+  {
+   "fieldname": "batch_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "批次号",
+   "read_only": 1,
+   "search_index": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "channel_store",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "渠道店铺",
+   "options": "Channel Store",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "channel",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "渠道",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "default_company",
+   "fieldtype": "Link",
+   "label": "默认公司",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "default_customer",
+   "fieldtype": "Link",
+   "label": "默认客户",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "default_warehouse",
+   "fieldtype": "Link",
+   "label": "默认仓库",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "default_price_list",
+   "fieldtype": "Link",
+   "label": "默认价格表",
+   "options": "Price List"
+  },
+  {
+   "default": "V1",
+   "fieldname": "template_version",
+   "fieldtype": "Select",
+   "label": "模板版本",
+   "options": "V1",
+   "reqd": 1
+  },
+  {
+   "fieldname": "source_file_name",
+   "fieldtype": "Data",
+   "label": "来源文件名"
+  },
+  {
+   "fieldname": "source_hash",
+   "fieldtype": "Data",
+   "label": "来源摘要"
+  },
+  {
+   "default": "草稿",
+   "fieldname": "batch_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "批次状态",
+   "options": "草稿\n待校验\n待导入\n部分导入\n已完成\n已取消",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "total_rows",
+   "fieldtype": "Int",
+   "label": "总行数",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "valid_rows",
+   "fieldtype": "Int",
+   "label": "有效行数",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "failed_rows",
+   "fieldtype": "Int",
+   "label": "失败行数",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "imported_orders",
+   "fieldtype": "Int",
+   "label": "已导入订单数",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "duplicate_orders",
+   "fieldtype": "Int",
+   "label": "重复订单数",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_import_at",
+   "fieldtype": "Datetime",
+   "label": "最近导入时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remark",
+   "fieldtype": "Small Text",
+   "label": "备注"
+  },
+  {
+   "fieldname": "items_section",
+   "fieldtype": "Section Break",
+   "label": "导入明细"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "导入明细",
+   "options": "Order Sync Batch Item"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "module": "Channel",
+ "name": "Order Sync Batch",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "quick_entry": 0,
+ "search_fields": "batch_no,source_file_name,channel_store",
+ "show_name_in_global_search": 1,
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "title_field": "batch_no",
+ "track_changes": 1
+}

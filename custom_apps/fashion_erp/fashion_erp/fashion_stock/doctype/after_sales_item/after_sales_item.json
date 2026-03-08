@@ -1,0 +1,134 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "item_code",
+  "sales_order_item_ref",
+  "delivery_note_item_ref",
+  "style",
+  "color_code",
+  "size_code",
+  "qty",
+  "requested_action",
+  "received_qty",
+  "inventory_status_from",
+  "inventory_status_to",
+  "return_reason",
+  "return_disposition",
+  "restock_qty",
+  "defective_qty",
+  "inspection_note"
+ ],
+ "fields": [
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "物料编码",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sales_order_item_ref",
+   "fieldtype": "Data",
+   "label": "销售订单明细引用"
+  },
+  {
+   "fieldname": "delivery_note_item_ref",
+   "fieldtype": "Data",
+   "label": "发货单明细引用"
+  },
+  {
+   "fieldname": "style",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "款号",
+   "options": "Style"
+  },
+  {
+   "fieldname": "color_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "颜色编码",
+   "read_only": 1
+  },
+  {
+   "fieldname": "size_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "尺码编码",
+   "read_only": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "申请数量",
+   "reqd": 1
+  },
+  {
+   "fieldname": "requested_action",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "申请动作",
+   "options": "仅退款\n退货退款\n换货\n补发\n维修\n投诉",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "received_qty",
+   "fieldtype": "Float",
+   "label": "实收数量"
+  },
+  {
+   "fieldname": "inventory_status_from",
+   "fieldtype": "Link",
+   "label": "原库存状态",
+   "options": "Inventory Status"
+  },
+  {
+   "fieldname": "inventory_status_to",
+   "fieldtype": "Link",
+   "label": "目标库存状态",
+   "options": "Inventory Status"
+  },
+  {
+   "fieldname": "return_reason",
+   "fieldtype": "Link",
+   "label": "退货原因",
+   "options": "Return Reason"
+  },
+  {
+   "fieldname": "return_disposition",
+   "fieldtype": "Link",
+   "label": "退货处理结果",
+   "options": "Return Disposition"
+  },
+  {
+   "default": "0",
+   "fieldname": "restock_qty",
+   "fieldtype": "Float",
+   "label": "可回售数量"
+  },
+  {
+   "default": "0",
+   "fieldname": "defective_qty",
+   "fieldtype": "Float",
+   "label": "次品数量"
+  },
+  {
+   "fieldname": "inspection_note",
+   "fieldtype": "Small Text",
+   "label": "质检说明"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "module": "Fashion Stock",
+ "name": "After Sales Item",
+ "track_changes": 1
+}

@@ -44,6 +44,8 @@ class ChannelStore(Document):
 
         ensure_link_exists("Warehouse", self.warehouse)
         ensure_link_exists("Price List", self.price_list)
+        ensure_link_exists("Company", getattr(self, "default_company", None))
+        ensure_link_exists("Customer", getattr(self, "default_customer", None))
 
         if self.status == "启用" and not self.warehouse:
             from frappe import throw

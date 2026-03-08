@@ -10,6 +10,8 @@
   "store_name",
   "warehouse",
   "price_list",
+  "default_company",
+  "default_customer",
   "status",
   "api_config_ref"
  ],
@@ -49,6 +51,18 @@
    "fieldtype": "Link",
    "label": "价格表",
    "options": "Price List"
+  },
+  {
+   "fieldname": "default_company",
+   "fieldtype": "Link",
+   "label": "默认公司",
+   "options": "Company"
+  },
+  {
+   "fieldname": "default_customer",
+   "fieldtype": "Link",
+   "label": "默认客户",
+   "options": "Customer"
   },
   {
    "default": "草稿",

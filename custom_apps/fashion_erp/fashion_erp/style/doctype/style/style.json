@@ -10,6 +10,12 @@
   "style_name",
   "classification_section",
   "brand",
+  "product_category",
+  "category_level_1",
+  "category_level_2",
+  "category_level_3",
+  "category_level_4",
+  "category_full_path",
   "category",
   "sub_category",
   "item_group",
@@ -20,6 +26,8 @@
   "planning_section",
   "design_owner",
   "size_system",
+  "size_range_summary",
+  "style_sizes",
   "item_template",
   "fabric_main",
   "fabric_lining",
@@ -64,20 +72,66 @@
    "in_standard_filter": 1,
    "label": "品牌",
    "options": "Brand",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "product_category",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "商品类目",
+   "options": "Style Category Template",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "category_level_1",
+   "fieldtype": "Data",
+   "label": "一级类目",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "category_level_2",
+   "fieldtype": "Data",
+   "label": "二级类目",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "category_level_3",
+   "fieldtype": "Data",
+   "label": "三级类目",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "category_level_4",
+   "fieldtype": "Data",
+   "label": "四级类目",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "category_full_path",
+   "fieldtype": "Small Text",
+   "label": "类目全路径",
+   "read_only": 1,
    "search_index": 1
   },
   {
    "fieldname": "category",
    "fieldtype": "Link",
+   "hidden": 1,
    "in_standard_filter": 1,
    "label": "款式大类",
    "options": "Style Category",
-   "reqd": 1,
    "search_index": 1
   },
   {
    "fieldname": "sub_category",
    "fieldtype": "Link",
+   "hidden": 1,
    "label": "款式小类",
    "options": "Style Sub Category",
    "search_index": 1
@@ -86,24 +140,25 @@
    "fieldname": "item_group",
    "fieldtype": "Link",
    "in_standard_filter": 1,
-   "label": "物料组",
+   "label": "成品物料组",
    "options": "Item Group",
    "search_index": 1
   },
   {
    "fieldname": "season",
-   "fieldtype": "Select",
+   "fieldtype": "Link",
    "in_standard_filter": 1,
    "label": "季节",
-   "options": "春夏\n秋冬\n全年",
+   "options": "Style Season",
    "reqd": 1,
    "search_index": 1
   },
   {
    "fieldname": "year",
-   "fieldtype": "Int",
+   "fieldtype": "Link",
    "in_standard_filter": 1,
    "label": "年份",
+   "options": "Style Year",
    "reqd": 1,
    "search_index": 1
   },
@@ -140,6 +195,20 @@
    "search_index": 1
   },
   {
+   "fieldname": "size_range_summary",
+   "fieldtype": "Data",
+   "label": "已选尺码范围",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "style_sizes",
+   "fieldtype": "Table",
+   "label": "本款尺码",
+   "options": "Style Size",
+   "reqd": 1
+  },
+  {
    "fieldname": "item_template",
    "fieldtype": "Link",
    "label": "模板货品",
@@ -148,13 +217,15 @@
   },
   {
    "fieldname": "fabric_main",
-   "fieldtype": "Data",
-   "label": "主面料"
+   "fieldtype": "Link",
+   "label": "主面料",
+   "options": "Fabric Master"
   },
   {
    "fieldname": "fabric_lining",
-   "fieldtype": "Data",
-   "label": "里料"
+   "fieldtype": "Link",
+   "label": "里料",
+   "options": "Fabric Master"
   },
   {
    "default": "0",
@@ -237,7 +308,7 @@
    "write": 1
   }
  ],
- "search_fields": "style_code,style_name,category,sub_category",
+ "search_fields": "style_code,style_name,brand,product_category,category_level_1,category_level_2,category_level_3,category_level_4,category_full_path",
  "show_name_in_global_search": 1,
  "sort_field": "modified",
  "sort_order": "DESC",

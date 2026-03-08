@@ -92,6 +92,30 @@
 - 当前代码已把 `default_location` 落成字典表
 - 历史文本值通过 `migrate_phase1_dictionary_links.py` 迁移进入字典对象
 
+### 2026-03-08 Style 验收补充实现
+
+本轮已按 `Style` 验收意见完成第一批基础模型重构：
+
+- `brand` 改为保存前必填。
+- 新增 `Style Category Template`，用于承载 `1-4` 级类目路径；`Style` 只选择最终类目，同时回显一级到四级与全路径。
+- `season` 改为 `Style Season` 主数据引用。
+- `year` 改为 `Style Year` 主数据引用。
+- 新增 `Fabric Master`，`Style` 上的 `主面料 / 里料` 改为引用同一张面料档案。
+- `item_group` 保留，但界面文案改为 `成品物料组`。
+
+这一批没有处理 `Style Size / 尺码选择 / 更换 size system 锁定`，该部分留给下一批 `9 + 10` 收口。
+
+### 2026-03-08 Style 尺码批次收口
+
+第二批已完成，核心口径如下：
+
+- `Style Category Template` 负责给 `Style` 提供 `default_size_system / allowed_size_systems`。
+- `Style` 不再按整个 `size_system` 全量生成 SKU，而是通过 `Style Size` 子表维护“本款实际尺码”。
+- `款色码矩阵`、`SKU 生成`、`生产跟踪单尺码范围` 已改为读取 `Style Size`。
+- 当款号下已经存在生成出的 SKU 时，`size_system` 与 `Style Size` 都会被锁定，防止同一款号下出现两套尺码语义。
+- `Style` 相关中文化已补齐剩余缺口，新增 `Style Color` 翻译，并将 `Fabric Master` 的 `MOQ` 标签改为 `起订量(MOQ)`。
+- 为了收口 `Launch Status` 中英混用，新增了样式状态清洗 patch；站点执行 `migrate` 后会把 `launch_status / sales_status / season / gender` 的历史英文值统一转换成中文。
+
 ### 1. SKU 不单独建主表
 
 第一期不创建独立 `SKU` DocType。
@@ -484,7 +508,7 @@ Desk 入口策略：
 
 补充说明：
 
-- 电商订单同步已改为永久搁置，当前只能手工同步
+- 电商订单同步及平台状态自动回写当前统一按 `外部依赖阻塞/暂停` 处理，现阶段只保留手工同步
 - 当前二阶段已完成仓储与状态流转基础
 - 当前主路线已切换为电商运营履约与第三方外包入库
 - 详见 [fashion-erp-product-analysis.md](E:\Dropbox\Syn\Project\frappe_docker_ra\docs\fashion-erp-product-analysis.md)

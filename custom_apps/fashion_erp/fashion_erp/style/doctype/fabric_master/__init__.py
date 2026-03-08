@@ -1,0 +1,1 @@
+"""Fabric Master DocType package."""

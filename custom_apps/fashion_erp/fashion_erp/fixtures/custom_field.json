@@ -453,6 +453,20 @@
   },
   {
     "doctype": "Custom Field",
+    "dt": "Sales Order",
+    "name": "Sales Order-fulfillment_status",
+    "fieldname": "fulfillment_status",
+    "fieldtype": "Select",
+    "insert_after": "biz_type",
+    "label": "履约状态",
+    "options": "待配货\n履约中\n待发货\n部分发货\n已发货\n已完成\n售后中\n已关闭\n已取消",
+    "default": "待配货",
+    "allow_on_submit": 1,
+    "read_only": 1,
+    "search_index": 1
+  },
+  {
+    "doctype": "Custom Field",
     "dt": "Sales Order Item",
     "name": "Sales Order Item-style",
     "fieldname": "style",
@@ -519,6 +533,99 @@
     "label": "是否预售",
     "default": "0"
   },
+  {
+    "doctype": "Custom Field",
+    "dt": "Sales Order Item",
+    "name": "Sales Order Item-fulfillment_status",
+    "fieldname": "fulfillment_status",
+    "fieldtype": "Select",
+    "insert_after": "is_presale",
+    "label": "履约状态",
+    "options": "待处理\n已锁库存\n拣货中\n已拣货\n打包中\n待发货\n部分发货\n已发货\n已签收\n售后中\n已关闭\n已取消",
+    "default": "待处理",
+    "allow_on_submit": 1,
+    "search_index": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Delivery Note",
+    "name": "Delivery Note-fashion_erp_fulfillment_section",
+    "fieldname": "fashion_erp_fulfillment_section",
+    "fieldtype": "Section Break",
+    "insert_after": "set_warehouse",
+    "label": "履约耗材"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Delivery Note",
+    "name": "Delivery Note-fulfillment_consumables",
+    "fieldname": "fulfillment_consumables",
+    "fieldtype": "Table",
+    "insert_after": "fashion_erp_fulfillment_section",
+    "label": "包装耗材",
+    "options": "Delivery Note Fulfillment Consumable",
+    "allow_on_submit": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Delivery Note",
+    "name": "Delivery Note-fulfillment_consumable_qty",
+    "fieldname": "fulfillment_consumable_qty",
+    "fieldtype": "Float",
+    "insert_after": "fulfillment_consumables",
+    "label": "耗材总数量",
+    "default": "0",
+    "read_only": 1,
+    "allow_on_submit": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Delivery Note",
+    "name": "Delivery Note-fulfillment_consumable_amount",
+    "fieldname": "fulfillment_consumable_amount",
+    "fieldtype": "Currency",
+    "insert_after": "fulfillment_consumable_qty",
+    "label": "耗材估算金额",
+    "default": "0",
+    "read_only": 1,
+    "allow_on_submit": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Delivery Note",
+    "name": "Delivery Note-manual_logistics_fee",
+    "fieldname": "manual_logistics_fee",
+    "fieldtype": "Currency",
+    "insert_after": "fulfillment_consumable_amount",
+    "label": "手工快递费",
+    "default": "0",
+    "allow_on_submit": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Delivery Note",
+    "name": "Delivery Note-fulfillment_total_cost",
+    "fieldname": "fulfillment_total_cost",
+    "fieldtype": "Currency",
+    "insert_after": "manual_logistics_fee",
+    "label": "履约总成本",
+    "default": "0",
+    "read_only": 1,
+    "allow_on_submit": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Delivery Note",
+    "name": "Delivery Note-fulfillment_consumable_stock_entry",
+    "fieldname": "fulfillment_consumable_stock_entry",
+    "fieldtype": "Link",
+    "insert_after": "fulfillment_total_cost",
+    "label": "耗材出库单",
+    "options": "Stock Entry",
+    "read_only": 1,
+    "allow_on_submit": 1,
+    "search_index": 1
+  },
     {
       "doctype": "Custom Field",
       "dt": "Stock Entry",
@@ -533,10 +640,21 @@
     {
       "doctype": "Custom Field",
       "dt": "Stock Entry",
+      "name": "Stock Entry-delivery_note",
+      "fieldname": "delivery_note",
+      "fieldtype": "Link",
+      "insert_after": "after_sales_ticket",
+      "label": "出货单",
+      "options": "Delivery Note",
+      "search_index": 1
+    },
+    {
+      "doctype": "Custom Field",
+      "dt": "Stock Entry",
       "name": "Stock Entry-outsource_order",
       "fieldname": "outsource_order",
       "fieldtype": "Link",
-      "insert_after": "after_sales_ticket",
+      "insert_after": "delivery_note",
       "label": "外包单",
       "options": "Outsource Order",
       "search_index": 1
@@ -661,10 +779,21 @@
     {
       "doctype": "Custom Field",
       "dt": "Stock Entry Detail",
+      "name": "Stock Entry Detail-delivery_note",
+      "fieldname": "delivery_note",
+      "fieldtype": "Link",
+      "insert_after": "after_sales_ticket",
+      "label": "出货单",
+      "options": "Delivery Note",
+      "search_index": 1
+    },
+    {
+      "doctype": "Custom Field",
+      "dt": "Stock Entry Detail",
       "name": "Stock Entry Detail-outsource_order",
       "fieldname": "outsource_order",
       "fieldtype": "Link",
-      "insert_after": "after_sales_ticket",
+      "insert_after": "delivery_note",
       "label": "外包单",
       "options": "Outsource Order",
       "search_index": 1

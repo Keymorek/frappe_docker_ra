@@ -8,7 +8,6 @@ from frappe.utils import cint, get_datetime, getdate, now_datetime, nowdate
 
 from fashion_erp.style.services.style_service import (
     coerce_non_negative_float,
-    ensure_enabled_link,
     ensure_link_exists,
     normalize_select,
     normalize_text,
@@ -45,6 +44,7 @@ def autoname_craft_sheet(doc) -> None:
 
 
 def validate_craft_sheet(doc) -> None:
+    _reset_craft_sheet_validation_cache(doc)
     doc.sheet_no = normalize_text(doc.sheet_no)
     doc.style = normalize_text(doc.style)
     doc.style_name = normalize_text(doc.style_name)
@@ -100,7 +100,7 @@ def publish_craft_sheet(sheet_name: str, *, note: str | None = None) -> dict[str
         frappe.throw(_("只有草稿状态的工艺单才能发布。"))
 
     if doc.sample_ticket:
-        sample_status = normalize_text(frappe.db.get_value("Sample Ticket", doc.sample_ticket, "sample_status"))
+        sample_status = _get_cached_sample_ticket_status(doc, doc.sample_ticket)
         if sample_status != "已确认":
             frappe.throw(_("关联打样单未确认前，不能发布工艺单。"))
 
@@ -171,23 +171,18 @@ def _validate_links(doc) -> None:
     if not doc.style:
         frappe.throw(_("款号不能为空。"))
 
-    ensure_link_exists("Style", doc.style)
-    ensure_link_exists("Item", doc.item_template)
-    ensure_link_exists("Sample Ticket", doc.sample_ticket)
-    ensure_link_exists("User", doc.prepared_by)
-    ensure_enabled_link("Color", doc.color)
+    _ensure_cached_link_exists(doc, "Style", doc.style)
+    _ensure_cached_link_exists(doc, "Item", doc.item_template)
+    _ensure_cached_link_exists(doc, "Sample Ticket", doc.sample_ticket)
+    _ensure_cached_link_exists(doc, "User", doc.prepared_by)
+    _ensure_cached_color_enabled(doc, doc.color)
 
 
 def _sync_from_style(doc) -> None:
     if not doc.style:
         return
 
-    style_row = frappe.db.get_value(
-        "Style",
-        doc.style,
-        ["style_name", "item_template"],
-        as_dict=True,
-    ) or {}
+    style_row = _get_cached_craft_style_row(doc, doc.style)
     doc.style_name = normalize_text(style_row.get("style_name")) or doc.style_name
     if not doc.item_template and style_row.get("item_template"):
         doc.item_template = style_row.get("item_template")
@@ -197,12 +192,7 @@ def _sync_from_sample_ticket(doc) -> None:
     if not doc.sample_ticket:
         return
 
-    sample_row = frappe.db.get_value(
-        "Sample Ticket",
-        doc.sample_ticket,
-        ["style", "style_name", "item_template", "color", "color_name", "color_code"],
-        as_dict=True,
-    ) or {}
+    sample_row = _get_cached_craft_sample_ticket_row(doc, doc.sample_ticket)
     sample_style = normalize_text(sample_row.get("style"))
     if sample_style and doc.style and doc.style != sample_style:
         frappe.throw(_("工艺单关联的打样单与款号不一致。"))
@@ -230,21 +220,148 @@ def _sync_from_color(doc) -> None:
         doc.color_code = ""
         return
 
-    color_row = frappe.db.get_value(
-        "Color",
-        doc.color,
-        ["color_name", "color_group"],
-        as_dict=True,
-    ) or {}
+    color_row = _get_cached_craft_color_row(doc, doc.color)
     doc.color_name = normalize_text(color_row.get("color_name")) or doc.color_name or doc.color
 
     color_group = normalize_text(color_row.get("color_group"))
     if not color_group:
         return
 
-    group_code = normalize_text(frappe.db.get_value("Color Group", color_group, "color_group_code"))
+    group_code = _get_cached_craft_color_group_code(doc, color_group)
     if group_code:
         doc.color_code = group_code
+
+
+def _reset_craft_sheet_validation_cache(doc) -> None:
+    cache = {
+        "link_exists": {},
+        "style_rows": {},
+        "sample_ticket_rows": {},
+        "sample_ticket_status": {},
+        "color_rows": {},
+        "color_group_codes": {},
+    }
+    flags = getattr(doc, "flags", None)
+    if flags is not None:
+        flags.craft_sheet_validation_cache = cache
+        return
+    doc._craft_sheet_validation_cache = cache
+
+
+def _get_craft_sheet_validation_cache(doc) -> dict[str, dict[object, object]]:
+    flags = getattr(doc, "flags", None)
+    if flags is not None:
+        cache = getattr(flags, "craft_sheet_validation_cache", None)
+        if isinstance(cache, dict):
+            return cache
+    else:
+        cache = getattr(doc, "_craft_sheet_validation_cache", None)
+        if isinstance(cache, dict):
+            return cache
+
+    _reset_craft_sheet_validation_cache(doc)
+    return _get_craft_sheet_validation_cache(doc)
+
+
+def _ensure_cached_link_exists(doc, doctype: str, name: str | None) -> None:
+    normalized_name = normalize_text(name)
+    if not normalized_name:
+        return
+
+    cache = _get_craft_sheet_validation_cache(doc)["link_exists"]
+    cache_key = (doctype, normalized_name)
+    if cache.get(cache_key):
+        return
+
+    ensure_link_exists(doctype, normalized_name)
+    cache[cache_key] = True
+
+
+def _ensure_cached_color_enabled(doc, color_name: str | None) -> None:
+    normalized_color = normalize_text(color_name)
+    if not normalized_color:
+        return
+
+    _ensure_cached_link_exists(doc, "Color", normalized_color)
+    color_row = _get_cached_craft_color_row(doc, normalized_color)
+    if color_row.get("enabled") is None:
+        return
+    if not cint(color_row.get("enabled")):
+        frappe.throw(_("颜色{0}已停用。").format(frappe.bold(normalized_color)))
+
+
+def _get_cached_craft_style_row(doc, style_name: str | None) -> dict[str, object]:
+    normalized_style = normalize_text(style_name)
+    if not normalized_style:
+        return {}
+
+    cache = _get_craft_sheet_validation_cache(doc)["style_rows"]
+    if normalized_style not in cache:
+        cache[normalized_style] = frappe.db.get_value(
+            "Style",
+            normalized_style,
+            ["style_name", "item_template"],
+            as_dict=True,
+        ) or {}
+    return cache[normalized_style]
+
+
+def _get_cached_craft_sample_ticket_row(doc, sample_ticket_name: str | None) -> dict[str, object]:
+    normalized_ticket = normalize_text(sample_ticket_name)
+    if not normalized_ticket:
+        return {}
+
+    cache = _get_craft_sheet_validation_cache(doc)["sample_ticket_rows"]
+    if normalized_ticket not in cache:
+        cache[normalized_ticket] = frappe.db.get_value(
+            "Sample Ticket",
+            normalized_ticket,
+            ["style", "style_name", "item_template", "color", "color_name", "color_code"],
+            as_dict=True,
+        ) or {}
+    return cache[normalized_ticket]
+
+
+def _get_cached_sample_ticket_status(doc, sample_ticket_name: str | None) -> str:
+    normalized_ticket = normalize_text(sample_ticket_name)
+    if not normalized_ticket:
+        return ""
+
+    cache = _get_craft_sheet_validation_cache(doc)["sample_ticket_status"]
+    if normalized_ticket not in cache:
+        cache[normalized_ticket] = normalize_text(
+            frappe.db.get_value("Sample Ticket", normalized_ticket, "sample_status")
+        )
+    return cache[normalized_ticket]
+
+
+def _get_cached_craft_color_row(doc, color_name: str | None) -> dict[str, object]:
+    normalized_color = normalize_text(color_name)
+    if not normalized_color:
+        return {}
+
+    cache = _get_craft_sheet_validation_cache(doc)["color_rows"]
+    if normalized_color not in cache:
+        cache[normalized_color] = frappe.db.get_value(
+            "Color",
+            normalized_color,
+            ["color_name", "color_group", "enabled"],
+            as_dict=True,
+        ) or {}
+    return cache[normalized_color]
+
+
+def _get_cached_craft_color_group_code(doc, color_group: str | None) -> str:
+    normalized_group = normalize_text(color_group)
+    if not normalized_group:
+        return ""
+
+    cache = _get_craft_sheet_validation_cache(doc)["color_group_codes"]
+    if normalized_group not in cache:
+        cache[normalized_group] = normalize_text(
+            frappe.db.get_value("Color Group", normalized_group, "color_group_code")
+        )
+    return cache[normalized_group]
 
 
 def _validate_unique_version(doc) -> None:
@@ -286,7 +403,7 @@ def _normalize_logs(doc) -> None:
             normalize_text(getattr(row, "to_status", None)),
         )
         row.operator = normalize_text(getattr(row, "operator", None)) or frappe.session.user
-        ensure_link_exists("User", row.operator)
+        _ensure_cached_link_exists(doc, "User", row.operator)
         row.note = normalize_text(getattr(row, "note", None))
 
 

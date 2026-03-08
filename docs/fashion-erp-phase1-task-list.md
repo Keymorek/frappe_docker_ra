@@ -82,6 +82,21 @@
 - `Item.default_location` 已切换为 `Link`
 - `migrate_phase1_dictionary_links.py` 会把历史文本值迁移到字典表
 
+### 2026-03-08 Style 验收收口补充
+
+- `Style.brand` 已改为必填，并在保存时做服务端校验。
+- `Style.category / sub_category` 退居为隐藏兼容字段；当前正式使用的是 `product_category -> Style Category Template`。
+- 新增 `Style Category Template`，按 `一级/二级/三级/四级/全路径` 建档，种子数据直接读取 `docs/抖音抖店女装服饰内衣类目.csv`。
+- `Style.season` 已改成 `Link -> Style Season`。
+- `Style.year` 已改成 `Link -> Style Year`。
+- `Style.fabric_main / fabric_lining` 已改成 `Link -> Fabric Master`。
+- `Style.item_group` 的界面口径已改成 `成品物料组`，用于和原辅料语义区分。
+- `Style Category Template` 已增加 `默认尺码体系 + 允许尺码体系` 规则字段。
+- `Style` 已增加 `Style Size` 子表，SKU 与矩阵只按本款已选尺码生成。
+- 一旦款号已经生成 SKU，系统会锁定 `size_system` 和 `本款尺码`，不能再直接修改。
+- `Style` 验收剩余中文化项已收口，补齐了 `Style Color` 等翻译，并把 `Fabric Master.MOQ` 改为中文显示 `起订量(MOQ)`。
+- `Style.launch_status / sales_status` 已补新增量 patch，站点 `migrate` 后会把历史英文值统一清洗为中文。
+
 ### T001 应用骨架初始化
 
 | 项目 | 内容 |

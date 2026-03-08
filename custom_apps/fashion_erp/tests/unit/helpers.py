@@ -30,6 +30,7 @@ class FakeDB:
         self.exists_map: dict[tuple[str, str], bool] = {}
         self.value_map: dict[tuple[object, ...], object] = {}
         self.sql_result: list[dict[str, object]] = []
+        self.sql_calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
         self.set_value_calls: list[tuple[object, ...]] = []
 
     def exists(self, doctype: str, name: str) -> bool:
@@ -47,6 +48,7 @@ class FakeDB:
         return None
 
     def sql(self, *_args, **_kwargs):
+        self.sql_calls.append((_args, _kwargs))
         return _clone(self.sql_result)
 
     def set_value(self, *args, **kwargs):

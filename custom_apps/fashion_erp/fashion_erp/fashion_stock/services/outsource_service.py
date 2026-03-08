@@ -1,0 +1,1009 @@
+from __future__ import annotations
+
+from collections import defaultdict
+
+import frappe
+from frappe import _
+from frappe.utils import cint, flt, get_datetime, getdate, now_datetime, nowdate
+
+from fashion_erp.fashion_stock.services.supply_service import (
+    ITEM_USAGE_TYPE_ALIASES,
+    ITEM_USAGE_TYPES,
+    RAW_MATERIAL_ITEM_TYPES,
+    SUPPLIER_ROLES,
+)
+from fashion_erp.style.services.style_service import (
+    coerce_non_negative_float,
+    coerce_non_negative_int,
+    ensure_enabled_link,
+    ensure_link_exists,
+    normalize_select,
+    normalize_text,
+)
+
+
+OUTSOURCE_ORDER_STATUSES = ("草稿", "已下单", "生产中", "已完成", "已取消")
+OUTSOURCE_ORDER_STATUS_ALIASES = {
+    "DRAFT": "草稿",
+    "SUBMITTED": "已下单",
+    "IN_PROGRESS": "生产中",
+    "COMPLETED": "已完成",
+    "CANCELLED": "已取消",
+}
+OUTSOURCE_LOG_ACTIONS = ("创建", "下单", "开工", "完成", "取消", "状态变更", "备注")
+OUTSOURCE_LOG_ACTION_ALIASES = {
+    "CREATE": "创建",
+    "SUBMIT": "下单",
+    "START": "开工",
+    "COMPLETE": "完成",
+    "CANCEL": "取消",
+    "STATUS_CHANGE": "状态变更",
+    "COMMENT": "备注",
+}
+OUTSOURCE_ALLOWED_SUPPLIER_ROLES = {"外包工厂", "综合供应商"}
+
+
+def autoname_outsource_order(doc) -> None:
+    if getattr(doc, "name", None) and not _is_unsaved_name(doc.name):
+        doc.order_no = doc.name
+        return
+
+    reference_dt = _normalize_date(getattr(doc, "order_date", None), use_today=True)
+    prefix = f"{reference_dt.strftime('%Y%m%d')}WB"
+    order_no = _make_daily_sequence("Outsource Order", prefix)
+    doc.name = order_no
+    doc.order_no = order_no
+
+
+def validate_outsource_order(doc) -> None:
+    _reset_outsource_validation_cache(doc)
+    doc.order_no = normalize_text(doc.order_no)
+    doc.style = normalize_text(doc.style)
+    doc.style_name = normalize_text(doc.style_name)
+    doc.item_template = normalize_text(doc.item_template)
+    doc.craft_sheet = normalize_text(doc.craft_sheet)
+    doc.sample_ticket = normalize_text(doc.sample_ticket)
+    doc.supplier = normalize_text(doc.supplier)
+    doc.order_status = normalize_select(
+        doc.order_status,
+        "单据状态",
+        OUTSOURCE_ORDER_STATUSES,
+        default="草稿",
+        alias_map=OUTSOURCE_ORDER_STATUS_ALIASES,
+    )
+    doc.order_date = _normalize_date(doc.order_date, use_today=True)
+    doc.expected_delivery_date = _normalize_date(doc.expected_delivery_date)
+    doc.color = normalize_text(doc.color)
+    doc.color_name = normalize_text(doc.color_name)
+    doc.color_code = normalize_text(doc.color_code)
+    doc.ordered_qty = _coerce_positive_int(doc.ordered_qty, "下单数量")
+    doc.received_qty = coerce_non_negative_int(doc.received_qty, "累计到货数量")
+    doc.unit_estimated_cost = coerce_non_negative_float(doc.unit_estimated_cost, "预计单件成本")
+    doc.total_estimated_cost = round(doc.ordered_qty * doc.unit_estimated_cost, 2)
+    doc.supplier_order_no = normalize_text(doc.supplier_order_no)
+    doc.receipt_warehouse = normalize_text(doc.receipt_warehouse)
+    doc.remark = normalize_text(doc.remark)
+
+    _validate_links(doc)
+    _sync_from_style(doc)
+    _sync_from_craft_sheet(doc)
+    _sync_from_sample_ticket(doc)
+    _sync_from_color(doc)
+    _validate_supplier(doc)
+    _normalize_materials(doc)
+    _normalize_logs(doc)
+    _append_system_logs(doc)
+    _validate_dates(doc)
+
+    if doc.received_qty > doc.ordered_qty:
+        frappe.throw(_("累计到货数量不能大于下单数量。"))
+
+    if getattr(doc, "name", None) and not _is_unsaved_name(doc.name):
+        doc.order_no = doc.name
+
+
+def sync_outsource_order_number(doc) -> None:
+    if doc.name and doc.order_no != doc.name:
+        doc.db_set("order_no", doc.name, update_modified=False)
+        doc.order_no = doc.name
+
+
+def submit_outsource_order(order_name: str, *, note: str | None = None) -> dict[str, object]:
+    doc = _get_outsource_order_doc(order_name)
+    _ensure_outsource_order_mutable(doc)
+    if doc.order_status != "草稿":
+        frappe.throw(_("只有草稿状态的外包单才能下发。"))
+    _ensure_submission_prerequisites(doc)
+
+    previous_status = doc.order_status
+    doc.order_status = "已下单"
+    _append_log(
+        doc,
+        action_type="下单",
+        from_status=previous_status,
+        to_status=doc.order_status,
+        note=normalize_text(note) or _("外包单已下发给工厂。"),
+    )
+    return _save_outsource_action(doc, _("外包单已下发。"))
+
+
+def start_outsource_order(order_name: str, *, note: str | None = None) -> dict[str, object]:
+    doc = _get_outsource_order_doc(order_name)
+    _ensure_outsource_order_mutable(doc)
+    if doc.order_status != "已下单":
+        frappe.throw(_("只有已下单的外包单才能开始生产。"))
+
+    previous_status = doc.order_status
+    doc.order_status = "生产中"
+    _append_log(
+        doc,
+        action_type="开工",
+        from_status=previous_status,
+        to_status=doc.order_status,
+        note=normalize_text(note) or _("外包工厂已开始生产。"),
+    )
+    return _save_outsource_action(doc, _("外包单已进入生产中状态。"))
+
+
+def complete_outsource_order(order_name: str, *, note: str | None = None) -> dict[str, object]:
+    doc = _get_outsource_order_doc(order_name)
+    _ensure_outsource_order_mutable(doc)
+    if doc.order_status not in ("已下单", "生产中"):
+        frappe.throw(_("只有已下单或生产中的外包单才能完成。"))
+
+    previous_status = doc.order_status
+    doc.order_status = "已完成"
+    _append_log(
+        doc,
+        action_type="完成",
+        from_status=previous_status,
+        to_status=doc.order_status,
+        note=normalize_text(note) or _("外包单已标记完成。"),
+    )
+    return _save_outsource_action(doc, _("外包单已完成。"))
+
+
+def cancel_outsource_order(order_name: str, *, note: str | None = None) -> dict[str, object]:
+    doc = _get_outsource_order_doc(order_name)
+    if doc.order_status == "已取消":
+        return _build_outsource_response(doc, _("外包单已取消。"))
+    if doc.order_status == "已完成":
+        frappe.throw(_("已完成的外包单不允许取消。"))
+
+    previous_status = doc.order_status
+    doc.order_status = "已取消"
+    _append_log(
+        doc,
+        action_type="取消",
+        from_status=previous_status,
+        to_status=doc.order_status,
+        note=normalize_text(note) or _("外包单已取消。"),
+    )
+    return _save_outsource_action(doc, _("外包单已取消。"))
+
+
+def get_outsource_supply_summary(order_name: str) -> dict[str, object]:
+    doc = _get_outsource_order_doc(order_name)
+    if not doc.materials:
+        return {
+            "ok": False,
+            "message": _("当前外包单还没有原辅料明细。"),
+            "rows": [],
+            "summary": _build_empty_supply_summary(),
+        }
+
+    material_groups = _group_outsource_materials(doc)
+    item_codes = tuple(material_groups.keys())
+    on_hand_by_item, on_hand_by_item_warehouse = _get_on_hand_qty_maps(item_codes)
+    on_order_maps = _get_open_purchase_qty_maps(
+        item_codes,
+        style=doc.style,
+        outsource_order=doc.name,
+    )
+
+    rows: list[dict[str, object]] = []
+    totals = _build_empty_supply_summary()
+    shortage_count = 0
+
+    for item_code in sorted(material_groups):
+        group = material_groups[item_code]
+        warehouses = group["warehouses"]
+        on_hand_qty = _resolve_on_hand_qty(
+            item_code,
+            warehouses=warehouses,
+            by_item=on_hand_by_item,
+            by_item_warehouse=on_hand_by_item_warehouse,
+        )
+        on_order_qty = _resolve_on_order_qty(
+            item_code,
+            warehouses=warehouses,
+            linked_maps=on_order_maps.get("linked", {}),
+            legacy_maps=on_order_maps.get("legacy", {}),
+        )
+
+        on_order_warning = ""
+        if on_order_qty[1]:
+            on_order_warning = _("存在未绑定外包单的旧采购数据，在途按款号口径补充估算。")
+        on_order_qty = on_order_qty[0]
+
+        required_qty = _round_qty(group["required_qty"])
+        prepared_qty = _round_qty(group["prepared_qty"])
+        issued_qty = _round_qty(group["issued_qty"])
+        on_hand_qty = _round_qty(on_hand_qty)
+        on_order_qty = _round_qty(on_order_qty)
+        to_prepare_qty = _round_qty(max(required_qty - prepared_qty, 0))
+        to_issue_qty = _round_qty(max(min(required_qty, prepared_qty) - issued_qty, 0))
+        to_purchase_qty = _round_qty(max(required_qty - prepared_qty - on_hand_qty - on_order_qty, 0))
+
+        status = "已覆盖"
+        if to_purchase_qty > 0:
+            status = "需采购"
+        elif to_prepare_qty > 0:
+            status = "待备货"
+        elif to_issue_qty > 0:
+            status = "待发料"
+
+        warning_parts: list[str] = []
+        if not warehouses:
+            warning_parts.append(_("未指定备货仓库，现货与在途按全仓口径估算。"))
+        if on_order_warning:
+            warning_parts.append(on_order_warning)
+        warning = "；".join(warning_parts)
+
+        row_payload = {
+            "item_code": item_code,
+            "item_name": group["item_name"],
+            "uom": group["uom"],
+            "required_qty": required_qty,
+            "prepared_qty": prepared_qty,
+            "issued_qty": issued_qty,
+            "on_hand_qty": on_hand_qty,
+            "on_order_qty": on_order_qty,
+            "to_prepare_qty": to_prepare_qty,
+            "to_issue_qty": to_issue_qty,
+            "to_purchase_qty": to_purchase_qty,
+            "warehouse_scope": "、".join(warehouses) if warehouses else _("全部仓库"),
+            "locations": "、".join(group["default_locations"]),
+            "source_rows": ", ".join(str(idx) for idx in group["row_indexes"]),
+            "status": status,
+            "warning": warning,
+        }
+        rows.append(row_payload)
+
+        totals["line_count"] += 1
+        totals["total_required_qty"] = _round_qty(totals["total_required_qty"] + required_qty)
+        totals["total_prepared_qty"] = _round_qty(totals["total_prepared_qty"] + prepared_qty)
+        totals["total_issued_qty"] = _round_qty(totals["total_issued_qty"] + issued_qty)
+        totals["total_on_hand_qty"] = _round_qty(totals["total_on_hand_qty"] + on_hand_qty)
+        totals["total_on_order_qty"] = _round_qty(totals["total_on_order_qty"] + on_order_qty)
+        totals["total_to_prepare_qty"] = _round_qty(totals["total_to_prepare_qty"] + to_prepare_qty)
+        totals["total_to_issue_qty"] = _round_qty(totals["total_to_issue_qty"] + to_issue_qty)
+        totals["total_to_purchase_qty"] = _round_qty(totals["total_to_purchase_qty"] + to_purchase_qty)
+        if to_purchase_qty > 0:
+            shortage_count += 1
+
+    rows.sort(key=lambda row: (-flt(row["to_purchase_qty"]), -flt(row["to_prepare_qty"]), row["item_code"]))
+    totals["shortage_count"] = shortage_count
+
+    message = _("供料视图已生成。")
+    if shortage_count:
+        message = _("供料视图已生成，存在 {0} 条需采购物料。").format(shortage_count)
+
+    return {
+        "ok": True,
+        "order_name": doc.name,
+        "order_no": doc.order_no or doc.name,
+        "style": doc.style,
+        "style_name": doc.style_name,
+        "rows": rows,
+        "summary": totals,
+        "message": message,
+    }
+
+
+def _validate_links(doc) -> None:
+    if not doc.style:
+        frappe.throw(_("款号不能为空。"))
+
+    _ensure_cached_link_exists(doc, "Style", doc.style)
+    _ensure_cached_link_exists(doc, "Item", doc.item_template)
+    _ensure_cached_link_exists(doc, "Craft Sheet", doc.craft_sheet)
+    _ensure_cached_link_exists(doc, "Sample Ticket", doc.sample_ticket)
+    _ensure_cached_link_exists(doc, "Supplier", doc.supplier)
+    _ensure_cached_link_exists(doc, "Warehouse", doc.receipt_warehouse)
+    _ensure_cached_enabled_link(doc, "Color", doc.color)
+
+
+def _sync_from_style(doc) -> None:
+    if not doc.style:
+        return
+
+    style_row = frappe.db.get_value(
+        "Style",
+        doc.style,
+        ["style_name", "item_template"],
+        as_dict=True,
+    ) or {}
+    doc.style_name = normalize_text(style_row.get("style_name")) or doc.style_name
+    if not doc.item_template and style_row.get("item_template"):
+        doc.item_template = style_row.get("item_template")
+
+    if doc.color:
+        return
+
+    colors = frappe.get_all(
+        "Style Color",
+        filters={"parent": doc.style, "enabled": 1},
+        fields=["color"],
+        order_by="idx asc",
+        limit=2,
+    )
+    if len(colors) == 1 and colors[0].get("color"):
+        doc.color = colors[0]["color"]
+
+
+def _sync_from_craft_sheet(doc) -> None:
+    if not doc.craft_sheet:
+        return
+
+    sheet_row = frappe.db.get_value(
+        "Craft Sheet",
+        doc.craft_sheet,
+        ["style", "style_name", "item_template", "sample_ticket", "color", "color_name", "color_code"],
+        as_dict=True,
+    ) or {}
+
+    sheet_style = normalize_text(sheet_row.get("style"))
+    if sheet_style and doc.style and doc.style != sheet_style:
+        frappe.throw(_("外包单关联的工艺单与款号不一致。"))
+    if sheet_style:
+        doc.style = sheet_style
+
+    if sheet_row.get("style_name"):
+        doc.style_name = normalize_text(sheet_row.get("style_name"))
+    if sheet_row.get("item_template") and not doc.item_template:
+        doc.item_template = sheet_row.get("item_template")
+    if sheet_row.get("sample_ticket"):
+        doc.sample_ticket = normalize_text(sheet_row.get("sample_ticket"))
+
+    sheet_color = normalize_text(sheet_row.get("color"))
+    if sheet_color and doc.color and doc.color != sheet_color:
+        frappe.throw(_("外包单颜色与工艺单颜色不一致。"))
+    if sheet_color:
+        doc.color = sheet_color
+    if sheet_row.get("color_name"):
+        doc.color_name = normalize_text(sheet_row.get("color_name"))
+    if sheet_row.get("color_code"):
+        doc.color_code = normalize_text(sheet_row.get("color_code"))
+
+
+def _sync_from_sample_ticket(doc) -> None:
+    if not doc.sample_ticket:
+        return
+
+    sample_row = frappe.db.get_value(
+        "Sample Ticket",
+        doc.sample_ticket,
+        ["style", "style_name", "item_template", "color", "color_name", "color_code"],
+        as_dict=True,
+    ) or {}
+    sample_style = normalize_text(sample_row.get("style"))
+    if sample_style and doc.style and doc.style != sample_style:
+        frappe.throw(_("外包单关联的打样单与款号不一致。"))
+    if sample_style:
+        doc.style = sample_style
+    if sample_row.get("style_name") and not doc.style_name:
+        doc.style_name = normalize_text(sample_row.get("style_name"))
+    if sample_row.get("item_template") and not doc.item_template:
+        doc.item_template = sample_row.get("item_template")
+
+    sample_color = normalize_text(sample_row.get("color"))
+    if sample_color and doc.color and doc.color != sample_color:
+        frappe.throw(_("外包单颜色与打样单颜色不一致。"))
+    if sample_color and not doc.color:
+        doc.color = sample_color
+    if sample_row.get("color_name") and not doc.color_name:
+        doc.color_name = normalize_text(sample_row.get("color_name"))
+    if sample_row.get("color_code") and not doc.color_code:
+        doc.color_code = normalize_text(sample_row.get("color_code"))
+
+
+def _sync_from_color(doc) -> None:
+    if not doc.color:
+        doc.color_name = ""
+        doc.color_code = ""
+        return
+
+    color_row = frappe.db.get_value(
+        "Color",
+        doc.color,
+        ["color_name", "color_group"],
+        as_dict=True,
+    ) or {}
+    doc.color_name = normalize_text(color_row.get("color_name")) or doc.color
+
+    color_group = normalize_text(color_row.get("color_group"))
+    if not color_group:
+        doc.color_code = ""
+        return
+
+    doc.color_code = normalize_text(
+        frappe.db.get_value("Color Group", color_group, "color_group_code")
+    )
+
+
+def _validate_supplier(doc) -> None:
+    if not doc.supplier:
+        return
+
+    supplier_role = normalize_select(
+        frappe.db.get_value("Supplier", doc.supplier, "supplier_role"),
+        "供应商角色",
+        SUPPLIER_ROLES,
+        default="综合供应商",
+    )
+    if supplier_role not in OUTSOURCE_ALLOWED_SUPPLIER_ROLES:
+        frappe.throw(
+            _("供应商 {0} 的角色 {1} 不适合作为外包工厂。").format(
+                frappe.bold(doc.supplier),
+                frappe.bold(supplier_role),
+            )
+        )
+
+
+def _normalize_materials(doc) -> None:
+    for row in doc.materials or []:
+        row.item_code = normalize_text(getattr(row, "item_code", None))
+        row.item_name = normalize_text(getattr(row, "item_name", None))
+        row.item_usage_type = normalize_text(getattr(row, "item_usage_type", None))
+        row.uom = normalize_text(getattr(row, "uom", None))
+        row.planned_qty = coerce_non_negative_float(getattr(row, "planned_qty", None), "计划用量")
+        row.prepared_qty = coerce_non_negative_float(getattr(row, "prepared_qty", None), "已备货数量")
+        row.issued_qty_manual = coerce_non_negative_float(getattr(row, "issued_qty_manual", None), "人工登记已发数量")
+        row.warehouse = normalize_text(getattr(row, "warehouse", None))
+        row.default_location = normalize_text(getattr(row, "default_location", None))
+        row.remark = normalize_text(getattr(row, "remark", None))
+
+        if not row.item_code:
+            frappe.throw(_("原辅料明细第 {0} 行缺少物料。").format(frappe.bold(row.idx)))
+
+        _ensure_cached_link_exists(doc, "Item", row.item_code)
+        item_values = _get_cached_outsource_item_values(doc, row.item_code)
+        row.item_name = normalize_text(item_values.get("item_name")) or row.item_name or row.item_code
+        row.item_usage_type = normalize_select(
+            item_values.get("item_usage_type"),
+            "物料用途",
+            ITEM_USAGE_TYPES,
+            default="其他",
+            alias_map=ITEM_USAGE_TYPE_ALIASES,
+        )
+        row.uom = normalize_text(item_values.get("stock_uom")) or row.uom
+        row.warehouse = row.warehouse or normalize_text(item_values.get("supply_warehouse"))
+        row.default_location = row.default_location or normalize_text(item_values.get("default_location"))
+
+        if row.item_usage_type not in RAW_MATERIAL_ITEM_TYPES:
+            frappe.throw(
+                _("原辅料明细第 {0} 行只能引用面料或辅料。").format(
+                    frappe.bold(row.idx)
+                )
+            )
+        if row.planned_qty <= 0:
+            frappe.throw(_("原辅料明细第 {0} 行的计划用量必须大于 0。").format(frappe.bold(row.idx)))
+        if row.prepared_qty > row.planned_qty:
+            frappe.throw(_("原辅料明细第 {0} 行的已备货数量不能大于计划用量。").format(frappe.bold(row.idx)))
+        if row.issued_qty_manual > row.planned_qty:
+            frappe.throw(_("原辅料明细第 {0} 行的人工登记已发数量不能大于计划用量。").format(frappe.bold(row.idx)))
+
+        _ensure_cached_link_exists(doc, "Warehouse", row.warehouse)
+        _ensure_cached_enabled_link(doc, "Warehouse Location", row.default_location)
+        if row.default_location and row.warehouse:
+            location_warehouse = _get_cached_location_warehouse(doc, row.default_location)
+            if location_warehouse and location_warehouse != row.warehouse:
+                frappe.throw(
+                    _("原辅料明细第 {0} 行的备货库位不属于备货仓库。").format(
+                        frappe.bold(row.idx)
+                    )
+                )
+
+
+def _group_outsource_materials(doc) -> dict[str, dict[str, object]]:
+    grouped: dict[str, dict[str, object]] = {}
+    for row in doc.materials or []:
+        item_code = normalize_text(getattr(row, "item_code", None))
+        if not item_code:
+            continue
+
+        payload = grouped.setdefault(
+            item_code,
+            {
+                "item_name": normalize_text(getattr(row, "item_name", None)) or item_code,
+                "uom": normalize_text(getattr(row, "uom", None)),
+                "required_qty": 0.0,
+                "prepared_qty": 0.0,
+                "issued_qty": 0.0,
+                "warehouses": set(),
+                "default_locations": set(),
+                "row_indexes": [],
+            },
+        )
+        payload["item_name"] = payload["item_name"] or normalize_text(getattr(row, "item_name", None)) or item_code
+        payload["uom"] = payload["uom"] or normalize_text(getattr(row, "uom", None))
+        payload["required_qty"] += flt(getattr(row, "planned_qty", None) or 0)
+        payload["prepared_qty"] += flt(getattr(row, "prepared_qty", None) or 0)
+        payload["issued_qty"] += flt(getattr(row, "issued_qty_manual", None) or 0)
+
+        warehouse = normalize_text(getattr(row, "warehouse", None))
+        location = normalize_text(getattr(row, "default_location", None))
+        if warehouse:
+            payload["warehouses"].add(warehouse)
+        if location:
+            payload["default_locations"].add(location)
+        if getattr(row, "idx", None):
+            payload["row_indexes"].append(cint(row.idx))
+
+    for payload in grouped.values():
+        payload["warehouses"] = sorted(payload["warehouses"])
+        payload["default_locations"] = sorted(payload["default_locations"])
+        payload["row_indexes"] = sorted(payload["row_indexes"])
+
+    return grouped
+
+
+def _get_on_hand_qty_maps(
+    item_codes: tuple[str, ...],
+) -> tuple[dict[str, float], dict[tuple[str, str], float]]:
+    if not item_codes:
+        return {}, {}
+
+    item_placeholders = ", ".join(["%s"] * len(item_codes))
+    rows = frappe.db.sql(
+        f"""
+        select item_code, warehouse, sum(actual_qty) as actual_qty
+        from `tabBin`
+        where item_code in ({item_placeholders})
+        group by item_code, warehouse
+        """,
+        item_codes,
+        as_dict=True,
+    )
+
+    by_item: dict[str, float] = defaultdict(float)
+    by_item_warehouse: dict[tuple[str, str], float] = {}
+    for row in rows:
+        item_code = normalize_text(row.get("item_code"))
+        warehouse = normalize_text(row.get("warehouse"))
+        qty = flt(row.get("actual_qty") or 0)
+        by_item[item_code] += qty
+        by_item_warehouse[(item_code, warehouse)] = qty
+
+    return dict(by_item), by_item_warehouse
+
+
+def _get_open_purchase_qty_maps(
+    item_codes: tuple[str, ...],
+    *,
+    style: str | None,
+    outsource_order: str | None,
+) -> dict[str, dict[str, object]]:
+    if not item_codes:
+        return {
+            "linked": _build_purchase_qty_scope_maps(),
+            "legacy": _build_purchase_qty_scope_maps(),
+        }
+
+    item_placeholders = ", ".join(["%s"] * len(item_codes))
+    style = normalize_text(style)
+    linked_rows: list[dict[str, object]] = []
+    if normalize_text(outsource_order):
+        linked_rows = _query_open_purchase_qty_rows(
+            item_placeholders,
+            params=[*item_codes, normalize_text(outsource_order)],
+            extra_filter="and coalesce(poi.reference_outsource_order, '') = %s",
+        )
+
+    legacy_rows: list[dict[str, object]] = []
+    if style:
+        legacy_rows = _query_open_purchase_qty_rows(
+            item_placeholders,
+            params=[*item_codes, style],
+            extra_filter="""
+              and coalesce(poi.reference_outsource_order, '') = ''
+              and coalesce(poi.reference_style, '') in ('', %s)
+            """,
+        )
+
+    return {
+        "linked": _build_purchase_qty_scope_maps(linked_rows),
+        "legacy": _build_purchase_qty_scope_maps(legacy_rows),
+    }
+
+
+def _query_open_purchase_qty_rows(
+    item_placeholders: str,
+    *,
+    params: list[object],
+    extra_filter: str,
+) -> list[dict[str, object]]:
+    return frappe.db.sql(
+        f"""
+        select
+            poi.item_code,
+            coalesce(poi.warehouse, '') as warehouse,
+            sum(
+                case
+                    when coalesce(poi.qty, 0) > coalesce(poi.received_qty, 0)
+                    then coalesce(poi.qty, 0) - coalesce(poi.received_qty, 0)
+                    else 0
+                end
+            ) as outstanding_qty
+        from `tabPurchase Order Item` poi
+        inner join `tabPurchase Order` po on po.name = poi.parent
+        where po.docstatus = 1
+          and poi.item_code in ({item_placeholders})
+          and coalesce(poi.qty, 0) > coalesce(poi.received_qty, 0)
+          {extra_filter}
+        group by poi.item_code, coalesce(poi.warehouse, '')
+        """,
+        params,
+        as_dict=True,
+    )
+
+
+def _build_purchase_qty_scope_maps(rows: list[dict[str, object]] | None = None) -> dict[str, object]:
+    by_item: dict[str, float] = defaultdict(float)
+    by_item_warehouse: dict[tuple[str, str], float] = {}
+    generic_by_item: dict[str, float] = defaultdict(float)
+
+    for row in rows or []:
+        item_code = normalize_text(row.get("item_code"))
+        warehouse = normalize_text(row.get("warehouse"))
+        qty = flt(row.get("outstanding_qty") or 0)
+        by_item[item_code] += qty
+        by_item_warehouse[(item_code, warehouse)] = qty
+        if not warehouse:
+            generic_by_item[item_code] += qty
+
+    return {
+        "by_item": dict(by_item),
+        "by_item_warehouse": by_item_warehouse,
+        "generic_by_item": dict(generic_by_item),
+    }
+
+
+def _resolve_scoped_purchase_qty(
+    item_code: str,
+    *,
+    warehouses: list[str],
+    scope_maps: dict[str, object],
+) -> float:
+    by_item = scope_maps.get("by_item", {})
+    by_item_warehouse = scope_maps.get("by_item_warehouse", {})
+    generic_by_item = scope_maps.get("generic_by_item", {})
+
+    if not warehouses:
+        return flt(by_item.get(item_code, 0))
+
+    specific_qty = sum(flt(by_item_warehouse.get((item_code, warehouse), 0)) for warehouse in warehouses)
+    return specific_qty + flt(generic_by_item.get(item_code, 0))
+
+
+def _resolve_on_order_qty(
+    item_code: str,
+    *,
+    warehouses: list[str],
+    linked_maps: dict[str, object],
+    legacy_maps: dict[str, object],
+) -> tuple[float, bool]:
+    linked_qty = _resolve_scoped_purchase_qty(
+        item_code,
+        warehouses=warehouses,
+        scope_maps=linked_maps,
+    )
+    if linked_qty > 0:
+        return linked_qty, False
+
+    legacy_qty = _resolve_scoped_purchase_qty(
+        item_code,
+        warehouses=warehouses,
+        scope_maps=legacy_maps,
+    )
+    return legacy_qty, legacy_qty > 0
+
+
+def _resolve_on_hand_qty(
+    item_code: str,
+    *,
+    warehouses: list[str],
+    by_item: dict[str, float],
+    by_item_warehouse: dict[tuple[str, str], float],
+) -> float:
+    if not warehouses:
+        return flt(by_item.get(item_code, 0))
+    return sum(flt(by_item_warehouse.get((item_code, warehouse), 0)) for warehouse in warehouses)
+
+
+def _reset_outsource_validation_cache(doc) -> None:
+    cache = {
+        "link_exists": {},
+        "enabled_links": {},
+        "item_values": {},
+        "location_warehouses": {},
+        "craft_sheet_status": {},
+    }
+    flags = getattr(doc, "flags", None)
+    if flags is not None:
+        flags.outsource_validation_cache = cache
+        return
+    doc._outsource_validation_cache = cache
+
+
+def _get_outsource_validation_cache(doc) -> dict[str, dict[object, object]]:
+    flags = getattr(doc, "flags", None)
+    if flags is not None:
+        cache = getattr(flags, "outsource_validation_cache", None)
+        if isinstance(cache, dict):
+            return cache
+    else:
+        cache = getattr(doc, "_outsource_validation_cache", None)
+        if isinstance(cache, dict):
+            return cache
+
+    _reset_outsource_validation_cache(doc)
+    return _get_outsource_validation_cache(doc)
+
+
+def _ensure_cached_link_exists(doc, doctype: str, name: str | None) -> None:
+    normalized_name = normalize_text(name)
+    if not normalized_name:
+        return
+
+    cache = _get_outsource_validation_cache(doc)["link_exists"]
+    cache_key = (doctype, normalized_name)
+    if cache.get(cache_key):
+        return
+
+    ensure_link_exists(doctype, normalized_name)
+    cache[cache_key] = True
+
+
+def _ensure_cached_enabled_link(
+    doc,
+    doctype: str,
+    name: str | None,
+    enabled_field: str = "enabled",
+) -> None:
+    normalized_name = normalize_text(name)
+    if not normalized_name:
+        return
+
+    cache = _get_outsource_validation_cache(doc)["enabled_links"]
+    cache_key = (doctype, normalized_name, enabled_field)
+    if cache.get(cache_key):
+        return
+
+    ensure_enabled_link(doctype, normalized_name, enabled_field)
+    cache[cache_key] = True
+
+
+def _get_cached_outsource_item_values(doc, item_code: str) -> dict[str, object]:
+    normalized_item_code = normalize_text(item_code)
+    if not normalized_item_code:
+        return {}
+
+    cache = _get_outsource_validation_cache(doc)["item_values"]
+    if normalized_item_code not in cache:
+        cache[normalized_item_code] = frappe.db.get_value(
+            "Item",
+            normalized_item_code,
+            ["item_name", "item_usage_type", "stock_uom", "supply_warehouse", "default_location"],
+            as_dict=True,
+        ) or {}
+    return cache[normalized_item_code]
+
+
+def _get_cached_location_warehouse(doc, location_name: str | None) -> str:
+    normalized_location = normalize_text(location_name)
+    if not normalized_location:
+        return ""
+
+    cache = _get_outsource_validation_cache(doc)["location_warehouses"]
+    if normalized_location not in cache:
+        cache[normalized_location] = normalize_text(
+            frappe.db.get_value("Warehouse Location", normalized_location, "warehouse")
+        )
+    return cache[normalized_location]
+
+
+def _get_cached_craft_sheet_status(doc, craft_sheet_name: str | None) -> str:
+    normalized_sheet_name = normalize_text(craft_sheet_name)
+    if not normalized_sheet_name:
+        return ""
+
+    cache = _get_outsource_validation_cache(doc)["craft_sheet_status"]
+    if normalized_sheet_name not in cache:
+        cache[normalized_sheet_name] = normalize_text(
+            frappe.db.get_value("Craft Sheet", normalized_sheet_name, "sheet_status")
+        )
+    return cache[normalized_sheet_name]
+
+
+def _build_empty_supply_summary() -> dict[str, float | int]:
+    return {
+        "line_count": 0,
+        "shortage_count": 0,
+        "total_required_qty": 0.0,
+        "total_prepared_qty": 0.0,
+        "total_issued_qty": 0.0,
+        "total_on_hand_qty": 0.0,
+        "total_on_order_qty": 0.0,
+        "total_to_prepare_qty": 0.0,
+        "total_to_issue_qty": 0.0,
+        "total_to_purchase_qty": 0.0,
+    }
+
+
+def _round_qty(value: float | int) -> float:
+    return round(flt(value or 0), 2)
+
+
+def _normalize_logs(doc) -> None:
+    for row in doc.logs or []:
+        row.action_time = _normalize_datetime(getattr(row, "action_time", None), use_now=True)
+        row.action_type = normalize_select(
+            getattr(row, "action_type", None),
+            "操作类型",
+            OUTSOURCE_LOG_ACTIONS,
+            default="备注",
+            alias_map=OUTSOURCE_LOG_ACTION_ALIASES,
+        )
+        row.from_status = OUTSOURCE_ORDER_STATUS_ALIASES.get(
+            normalize_text(getattr(row, "from_status", None)),
+            normalize_text(getattr(row, "from_status", None)),
+        )
+        row.to_status = OUTSOURCE_ORDER_STATUS_ALIASES.get(
+            normalize_text(getattr(row, "to_status", None)),
+            normalize_text(getattr(row, "to_status", None)),
+        )
+        row.operator = normalize_text(getattr(row, "operator", None)) or frappe.session.user
+        _ensure_cached_link_exists(doc, "User", row.operator)
+        row.note = normalize_text(getattr(row, "note", None))
+
+
+def _append_system_logs(doc) -> None:
+    if getattr(doc.flags, "skip_outsource_order_system_log", False):
+        return
+
+    previous_status = ""
+    before = doc.get_doc_before_save() if hasattr(doc, "get_doc_before_save") else None
+    if before:
+        previous_status = normalize_text(getattr(before, "order_status", None))
+
+    if doc.is_new() and not _has_action_log(doc, "创建"):
+        _append_log(
+            doc,
+            action_type="创建",
+            to_status=doc.order_status,
+            note=_("创建外包单。"),
+        )
+    elif previous_status and previous_status != doc.order_status:
+        _append_log(
+            doc,
+            action_type="状态变更",
+            from_status=previous_status,
+            to_status=doc.order_status,
+            note=_("外包单状态已更新。"),
+        )
+
+
+def _validate_dates(doc) -> None:
+    if doc.expected_delivery_date and doc.order_date and doc.expected_delivery_date < doc.order_date:
+        frappe.throw(_("预计到货日期不能早于下单日期。"))
+
+
+def _ensure_submission_prerequisites(doc) -> None:
+    if not doc.craft_sheet:
+        frappe.throw(_("下发外包单前必须先关联工艺单。"))
+
+    craft_status = _get_cached_craft_sheet_status(doc, doc.craft_sheet)
+    if craft_status != "已发布":
+        frappe.throw(_("只有已发布的工艺单才能用于外包下单。"))
+
+    if not doc.materials:
+        frappe.throw(_("下发外包单前至少需要一条原辅料引用明细。"))
+
+
+def _ensure_outsource_order_mutable(doc) -> None:
+    if doc.order_status in ("已完成", "已取消"):
+        frappe.throw(_("当前外包单状态不允许继续操作。"))
+
+
+def _save_outsource_action(doc, message: str) -> dict[str, object]:
+    doc.flags.skip_outsource_order_system_log = True
+    try:
+        doc.save(ignore_permissions=True)
+    finally:
+        doc.flags.skip_outsource_order_system_log = False
+    return _build_outsource_response(doc, message)
+
+
+def _build_outsource_response(doc, message: str) -> dict[str, object]:
+    return {
+        "ok": True,
+        "name": doc.name,
+        "order_no": doc.order_no or doc.name,
+        "order_status": doc.order_status,
+        "ordered_qty": cint(doc.ordered_qty),
+        "received_qty": cint(doc.received_qty),
+        "total_estimated_cost": float(doc.total_estimated_cost or 0),
+        "message": message,
+    }
+
+
+def _append_log(
+    doc,
+    *,
+    action_type: str,
+    from_status: str = "",
+    to_status: str = "",
+    note: str = "",
+) -> None:
+    doc.append(
+        "logs",
+        {
+            "action_time": now_datetime(),
+            "action_type": action_type,
+            "from_status": from_status,
+            "to_status": to_status,
+            "operator": frappe.session.user,
+            "note": note,
+        },
+    )
+
+
+def _has_action_log(doc, action_type: str) -> bool:
+    return any(normalize_text(row.action_type) == action_type for row in (doc.logs or []))
+
+
+def _get_outsource_order_doc(order_name: str):
+    return frappe.get_doc("Outsource Order", order_name)
+
+
+def _normalize_date(value, *, use_today: bool = False):
+    if not value:
+        return getdate(nowdate()) if use_today else None
+    return getdate(value)
+
+
+def _normalize_datetime(value, *, use_now: bool = False):
+    if not value:
+        return now_datetime() if use_now else None
+    return get_datetime(value)
+
+
+def _coerce_positive_int(value, field_label: str) -> int:
+    number = coerce_non_negative_int(value, field_label)
+    if number <= 0:
+        frappe.throw(_("{0}必须大于0。").format(field_label))
+    return number
+
+
+def _make_daily_sequence(doctype: str, prefix: str, digits: int = 4) -> str:
+    last_name = frappe.db.sql(
+        f"""
+        select name
+        from `tab{doctype}`
+        where name like %s
+        order by name desc
+        limit 1
+        """,
+        (f"{prefix}%",),
+    )
+    last_value = last_name[0][0] if last_name else ""
+    suffix = normalize_text(last_value)[len(prefix):]
+    last_index = int(suffix) if suffix.isdigit() else 0
+    return f"{prefix}{last_index + 1:0{digits}d}"
+
+
+def _is_unsaved_name(value: str) -> bool:
+    normalized = normalize_text(value)
+    return not normalized or normalized.startswith("New ")

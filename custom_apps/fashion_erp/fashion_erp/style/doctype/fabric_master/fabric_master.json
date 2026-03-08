@@ -1,0 +1,393 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "field:fabric_id",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "fabric_id",
+  "fabric_name",
+  "supplier_section",
+  "fabric_category",
+  "fabric_sub_category",
+  "main_composition",
+  "supplier",
+  "supplier_name",
+  "supplier_code",
+  "linked_item",
+  "performance_section",
+  "weight_gsm",
+  "thickness_grade",
+  "drape",
+  "firmness",
+  "elasticity",
+  "breathability",
+  "hand_feel",
+  "surface_style",
+  "texture",
+  "weave_method",
+  "dyeing_method",
+  "finishing_process",
+  "shrinkage_rate",
+  "wrinkle_prone",
+  "printable",
+  "suitable_seasons",
+  "suitable_styles",
+  "style_attributes",
+  "visual_effect",
+  "pricing_section",
+  "recommended_price_band",
+  "unit_price",
+  "moq",
+  "width_cm",
+  "stock_status",
+  "sample_lead_days",
+  "bulk_lead_days",
+  "available_color_count",
+  "standard_color_code",
+  "customizable_colors",
+  "quality_section",
+  "color_fastness",
+  "pilling_grade",
+  "eco_certification",
+  "quality_grade",
+  "historical_styles",
+  "image_section",
+  "fabric_image",
+  "texture_image",
+  "garment_effect_image",
+  "enabled",
+  "remark"
+ ],
+ "fields": [
+  {
+   "fieldname": "fabric_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "面料编号",
+   "length": 40,
+   "reqd": 1,
+   "search_index": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "fabric_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "面料名称",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "supplier_section",
+   "fieldtype": "Section Break",
+   "label": "基础信息"
+  },
+  {
+   "fieldname": "fabric_category",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "面料类别",
+   "search_index": 1
+  },
+  {
+   "fieldname": "fabric_sub_category",
+   "fieldtype": "Data",
+   "label": "面料子类",
+   "search_index": 1
+  },
+  {
+   "fieldname": "main_composition",
+   "fieldtype": "Small Text",
+   "label": "主要成分"
+  },
+  {
+   "fieldname": "supplier",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "供应商",
+   "options": "Supplier",
+   "search_index": 1
+  },
+  {
+   "fieldname": "supplier_name",
+   "fieldtype": "Data",
+   "label": "供应商名称",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "supplier_code",
+   "fieldtype": "Data",
+   "label": "供应商编号",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "linked_item",
+   "fieldtype": "Link",
+   "label": "采购物料",
+   "options": "Item",
+   "search_index": 1
+  },
+  {
+   "fieldname": "performance_section",
+   "fieldtype": "Section Break",
+   "label": "性能与风格"
+  },
+  {
+   "default": "0",
+   "fieldname": "weight_gsm",
+   "fieldtype": "Float",
+   "label": "克重(gsm)"
+  },
+  {
+   "fieldname": "thickness_grade",
+   "fieldtype": "Data",
+   "label": "厚度等级"
+  },
+  {
+   "fieldname": "drape",
+   "fieldtype": "Data",
+   "label": "垂坠性"
+  },
+  {
+   "fieldname": "firmness",
+   "fieldtype": "Data",
+   "label": "挺度"
+  },
+  {
+   "fieldname": "elasticity",
+   "fieldtype": "Data",
+   "label": "弹性"
+  },
+  {
+   "fieldname": "breathability",
+   "fieldtype": "Data",
+   "label": "透气性"
+  },
+  {
+   "fieldname": "hand_feel",
+   "fieldtype": "Data",
+   "label": "触感"
+  },
+  {
+   "fieldname": "surface_style",
+   "fieldtype": "Data",
+   "label": "表面风格"
+  },
+  {
+   "fieldname": "texture",
+   "fieldtype": "Data",
+   "label": "纹理"
+  },
+  {
+   "fieldname": "weave_method",
+   "fieldtype": "Data",
+   "label": "织造方式"
+  },
+  {
+   "fieldname": "dyeing_method",
+   "fieldtype": "Data",
+   "label": "染色方式"
+  },
+  {
+   "fieldname": "finishing_process",
+   "fieldtype": "Data",
+   "label": "后整理"
+  },
+  {
+   "default": "0",
+   "fieldname": "shrinkage_rate",
+   "fieldtype": "Percent",
+   "label": "缩水率"
+  },
+  {
+   "default": "0",
+   "fieldname": "wrinkle_prone",
+   "fieldtype": "Check",
+   "label": "是否易皱"
+  },
+  {
+   "default": "0",
+   "fieldname": "printable",
+   "fieldtype": "Check",
+   "label": "可印花"
+  },
+  {
+   "fieldname": "suitable_seasons",
+   "fieldtype": "Small Text",
+   "label": "适合季节"
+  },
+  {
+   "fieldname": "suitable_styles",
+   "fieldtype": "Small Text",
+   "label": "适合款式"
+  },
+  {
+   "fieldname": "style_attributes",
+   "fieldtype": "Small Text",
+   "label": "风格属性"
+  },
+  {
+   "fieldname": "visual_effect",
+   "fieldtype": "Small Text",
+   "label": "视觉效果"
+  },
+  {
+   "fieldname": "pricing_section",
+   "fieldtype": "Section Break",
+   "label": "价格与供货"
+  },
+  {
+   "fieldname": "recommended_price_band",
+   "fieldtype": "Data",
+   "label": "推荐价格带"
+  },
+  {
+   "default": "0",
+   "fieldname": "unit_price",
+   "fieldtype": "Currency",
+   "label": "单价"
+  },
+  {
+   "default": "0",
+   "fieldname": "moq",
+   "fieldtype": "Float",
+   "label": "起订量(MOQ)"
+  },
+  {
+   "default": "0",
+   "fieldname": "width_cm",
+   "fieldtype": "Float",
+   "label": "门幅(cm)"
+  },
+  {
+   "fieldname": "stock_status",
+   "fieldtype": "Data",
+   "label": "库存情况"
+  },
+  {
+   "default": "0",
+   "fieldname": "sample_lead_days",
+   "fieldtype": "Int",
+   "label": "打样周期(天)"
+  },
+  {
+   "default": "0",
+   "fieldname": "bulk_lead_days",
+   "fieldtype": "Int",
+   "label": "大货周期(天)"
+  },
+  {
+   "default": "0",
+   "fieldname": "available_color_count",
+   "fieldtype": "Int",
+   "label": "可选颜色数量"
+  },
+  {
+   "fieldname": "standard_color_code",
+   "fieldtype": "Data",
+   "label": "标准色号"
+  },
+  {
+   "default": "0",
+   "fieldname": "customizable_colors",
+   "fieldtype": "Check",
+   "label": "可定制颜色"
+  },
+  {
+   "fieldname": "quality_section",
+   "fieldtype": "Section Break",
+   "label": "质量信息"
+  },
+  {
+   "fieldname": "color_fastness",
+   "fieldtype": "Data",
+   "label": "色牢度"
+  },
+  {
+   "fieldname": "pilling_grade",
+   "fieldtype": "Data",
+   "label": "起球等级"
+  },
+  {
+   "fieldname": "eco_certification",
+   "fieldtype": "Small Text",
+   "label": "环保认证"
+  },
+  {
+   "fieldname": "quality_grade",
+   "fieldtype": "Data",
+   "label": "质检等级"
+  },
+  {
+   "fieldname": "historical_styles",
+   "fieldtype": "Small Text",
+   "label": "历史使用款式"
+  },
+  {
+   "fieldname": "image_section",
+   "fieldtype": "Section Break",
+   "label": "图片"
+  },
+  {
+   "fieldname": "fabric_image",
+   "fieldtype": "Attach Image",
+   "label": "面料图片"
+  },
+  {
+   "fieldname": "texture_image",
+   "fieldtype": "Attach Image",
+   "label": "纹理图片"
+  },
+  {
+   "fieldname": "garment_effect_image",
+   "fieldtype": "Attach Image",
+   "label": "成衣效果图"
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "启用",
+   "search_index": 1
+  },
+  {
+   "fieldname": "remark",
+   "fieldtype": "Small Text",
+   "label": "备注"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "module": "Style",
+ "name": "Fabric Master",
+ "naming_rule": "By fieldname",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "search_fields": "fabric_id,fabric_name,fabric_category,fabric_sub_category,main_composition,supplier_name,supplier_code,standard_color_code",
+ "show_name_in_global_search": 1,
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "title_field": "fabric_name",
+ "track_changes": 1
+}
